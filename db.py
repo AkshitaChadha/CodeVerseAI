@@ -3,13 +3,14 @@ import bcrypt
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
+import streamlit as st
 
 load_dotenv()  # Load DATABASE_URL from .env
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or st.secrets.get("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("❌ DATABASE_URL is missing in .env")
+    st.error("DATABASE_URL missing! Please add in Streamlit Secrets.")
 
 def get_connection():
     """Create a PostgreSQL DB connection"""
