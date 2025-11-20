@@ -2,9 +2,6 @@ import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
-from db import init_db
-init_db()
-
 # Initialize session
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
