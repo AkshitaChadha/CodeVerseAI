@@ -5,15 +5,20 @@ import plotly.express as px
 from groq import Groq
 from dotenv import load_dotenv
 import os
+from db import init_db
 
+init_db()
+load_dotenv()
 def dashboard():
     # --------- PAGE CONFIG ----------
     st.set_page_config(page_title="Codeverse Ai", page_icon="🤖", layout="wide")
 
     # --------- LOAD GROQ & CHAT MEMORY ----------
     # --------- LOAD GROQ & CHAT MEMORY ----------
-    load_dotenv()
+    
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    
+    
 
     # Separate key for chatbot messages
     if "chatbot_messages" not in st.session_state:
