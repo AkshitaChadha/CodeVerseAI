@@ -1,9 +1,7 @@
 import streamlit as st
 from base64 import b64encode
+import os
 
-# ---- Convert Image to Base64 for Hero Section ----
-with open(r"D:\Desktop\Codes\CodeVerseAI\assets\monitor.png", "rb") as file:
-    encoded_image = b64encode(file.read()).decode()
 
 # --- 1. Inject Custom CSS ---
 def inject_custom_css():
@@ -85,7 +83,10 @@ def inject_custom_css():
 def app_main():
     st.set_page_config(page_title="CodeVerse AI", layout="wide", initial_sidebar_state="collapsed")
     inject_custom_css()
-
+    # Load image correctly
+    ASSET_PATH = os.path.join("assets", "monitor.png")
+    with open(ASSET_PATH, "rb") as file:
+        encoded_image = b64encode(file.read()).decode()
     # Navbar
     st.markdown("""
         <div class="navbar">
