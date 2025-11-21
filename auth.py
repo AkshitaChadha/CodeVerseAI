@@ -137,24 +137,24 @@ def signup():
             # Validate Fields
             if not username or not email or not password or not confirm:
                 st.error("All fields are required")
-                return
+                st.stop()
             
             if "@" not in email or "." not in email:
                 st.error("Please enter a valid email address")
-                return
+                st.stop()
             
             if len(password) < 6:
                 st.error("Password must be at least 6 characters long")
-                return
+                st.stop()
             
             if password != confirm:
                 st.error("Passwords do not match")
-                return
+                st.stop()
             
             existing_user = find_user_by_email(email)
             if existing_user:
                 st.warning("Email already registered")
-                return
+                st.stop()
 
             # Insert User in DB
             success = insert_user(username, email, password)
@@ -201,7 +201,7 @@ def login():
                 st.error("No account found.")
             if not email or not password:
                 st.error("Please enter both email and password.")
-                return
+                st.stop() 
             elif check_password(password, user["password"]):
                 # Store user identity for dashboard
                 st.session_state["user"] = {
