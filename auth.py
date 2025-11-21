@@ -45,10 +45,11 @@ def inject_auth_css():
         /* ---- CENTER CARD ---- */
         
         .auth-title {
+            white-space: nowrap;
             font-size: 2.3rem;
             font-weight: 900;
             text-align: center;
-            margin-bottom: 1.8rem;
+            margin-bottom: 1.8rem; 
         }
 
         /* ---- INPUT FIELDS ---- */
@@ -69,6 +70,7 @@ def inject_auth_css():
 
         /* ---- MAIN SUBMIT BUTTON ---- */
         div.stButton>button {
+            white-space: nowrap;
             width: 100%;
             height: 48px;
             font-size: 1rem;
@@ -102,7 +104,7 @@ def inject_auth_css():
 # Helper: small centered layout
 def centered_container():
     """Creates a visually centered narrow column for forms."""
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    # This is the original implementation without the <br> tags
     left, center, right = st.columns([1, 0.6, 1])
     return center
 
@@ -120,66 +122,67 @@ def signup():
     with centered_container():
         st.markdown('<div class="auth-title">Create Account</div>', unsafe_allow_html=True)
 
-        # 🧾 Input Form (NO submit button inside)
+        # 🧾 Input Form (with hidden submit to suppress warning)
         with st.form("signup_form", clear_on_submit=False):
+            # Move hidden submit button to the top to reduce space
+            st.form_submit_button(label=" ", disabled=True)
+            
             username = st.text_input("Username")
             email = st.text_input("Email")
             password = st.text_input("Password", type="password")
             confirm = st.text_input("Confirm Password", type="password")
-
-            form_submitted = st.form_submit_button("✓ Hidden Submit", disabled=True)  
-            # hidden / disabled just to enable form validation structure
-
-        # 🎨 Styled Main Submit Button
-        sign_btn = st.button("Sign Up")
-
-        if sign_btn:
-            # Validate Fields
-            if not username or not email or not password or not confirm:
-                st.error("All fields are required")
-                st.stop()
             
-            if "@" not in email or "." not in email:
-                st.error("Please enter a valid email address")
-                st.stop()
             
-            if len(password) < 6:
-                st.error("Password must be at least 6 characters long")
-                st.stop()
+        error_placeholder = st.empty()
+        
+        # FIX 1: Negative margin div for spacing fix
+        st.markdown('<div style="margin-top: -1.0rem;"></div>', unsafe_allow_html=True)
             
-            if password != confirm:
-                st.error("Passwords do not match")
-                st.stop()
-            
-            existing_user = find_user_by_email(email)
-            if existing_user:
-                st.warning("Email already registered")
-                st.stop()
-
-            # Insert User in DB
-            success = insert_user(username, email, password)
-
-            if success:
-                try:
-                    welcome_mail(email, username)
-                except Exception as e:
-                    print("Mail sending failed:", e)
-
-                st.success("Account created successfully!")
-                st.session_state["auth_mode"] = "login"
-                st.rerun()
-            else:
-                st.error("Signup failed! Try again")
-                return
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Already have an account? Login"):
+        # 👇 Moved here — always visible even on error
+        sign_btn = st.button("Sign Up") 
+        login_redirect = st.button("Already have an account? Login")
+        if login_redirect:
             st.session_state["auth_mode"] = "login"
             st.rerun()
 
+        # ================= VALIDATION ================= #
+        if sign_btn:
+            # Redirect future messages into placeholder
+            def show_error(msg):
+                error_placeholder.error(msg)
+                
+            # --- VALIDATION RESTRUCTURE ---
+            
+            # 1. Primary Check: All fields must be non-empty first (High Priority)
+            if not username or not email or not password or not confirm:
+                show_error("All fields are required")
+            
+            # 2. Specific Checks: Only run if all fields are filled
+            elif password != confirm:
+                show_error("Passwords do not match")
+            elif len(password) < 6: 
+                show_error("Password must be at least 6 characters long")
+            elif "@" not in email or "." not in email:
+                show_error("Please enter a valid email address")
+            elif find_user_by_email(email):
+                show_error("Email already registered")
+            
+            else:
+                # ---- All Good → Create Account ----
+                success = insert_user(username, email, password)
 
+                if success:
+                    try:
+                        welcome_mail(email, username)
+                    except Exception as e:
+                        print("Mail sending failed:", e)
 
-# --- LOGIN ---
+                    st.success("Account created successfully! 🎉")
+                    st.session_state["auth_mode"] = "login"
+                    st.rerun()
+                else:
+                    show_error("Signup failed! Try again")
+#--- LOGIN ---
 def login():
     inject_auth_css()
     st_errors_style()
@@ -227,7 +230,7 @@ def login():
             st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1, 4, 1])
         with col2:
             if st.button("No account? Signup", key="login_to_signup_center"):
                 st.session_state["auth_mode"] = "signup"
