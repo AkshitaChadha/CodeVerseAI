@@ -14,6 +14,20 @@ from db import (
 from utils import password_hash
 from mail_utils import welcome_mail, send_otp_mail
 
+def st_errors_style():
+    st.markdown("""
+    <style>
+    .stAlert{
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+    }
+    .stAlert div[role="alert"]{
+        background-color: #D32F2F !important;
+        border-color: #B71C1C !important;
+        color:white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 def inject_auth_css():
     st.markdown("""
@@ -28,61 +42,59 @@ def inject_auth_css():
 
         #MainMenu, footer {visibility: hidden;}
 
-        .auth-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: white ;
-            text-align: center;
-            margin-bottom: 2rem;
-            margin-top: -2rem;
-        }
-
-        div[data-testid="stTextInput"] input {
-            background-color: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            border: 1px solid rgba(58,102,255,0.3);
-            color: black !important;
-        }
-        div[data-testid="stTextInput"] input:focus {
-            border: 1px solid #3A66FF;
-            box-shadow: 0 0 8px #3A66FF80;
-        }
+        /* ---- CENTER CARD ---- */
         
-        div[data-testid="stTextInput"] > label > div > p {
-            color: #FFFFFF !important;
-            font-weight: 500;
-            font-size: 0.9rem;
+        .auth-title {
+            font-size: 2.3rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 1.8rem;
         }
 
-        div.stButton>button {
-            background: linear-gradient(90deg, #3A66FF, #2D58E0);
-            color: white;
-            font-weight: 600;
+        /* ---- INPUT FIELDS ---- */
+        div[data-testid="stTextInput"] input {
+            background-color: rgba(255,255,255,0.95);
+            border-radius: 12px;
             border: none;
-            border-radius: 30px;
-            padding: 0.6rem 2.2rem;
-            cursor: pointer;
-            transition: 0.3s;
-            white-space: nowrap;
-            display: inline-block;
-            width: auto !important;
-            max-width: none !important;
-            text-align: center;
+            height: 48px;
+            font-size: 1rem;
+            color: #001A43;
+            padding-left: 14px;
         }
-        div.stButton>button:hover {
-            background: linear-gradient(90deg, #2D58E0, #3A66FF);
-            box-shadow: 0 0 15px rgba(58, 102, 255, 0.4);
+        div[data-testid="stTextInput"] > label > div > p {
+            color: #D7E2FF !important;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
-        .secondary-btn {
-            color: #3A66FF !important;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            text-align: center;
+        /* ---- MAIN SUBMIT BUTTON ---- */
+        div.stButton>button {
+            width: 100%;
+            height: 48px;
+            font-size: 1rem;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #3A66FF, #2D58E0);
+            font-weight: 700;
+        }
+
+        div.stButton>button:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(90deg, #2D58E0, #3A66FF);
+            box-shadow: 0 0 12px rgba(58,102,255,0.5);
+        }
+
+        /* ---- LINK BUTTON ---- */
+        .link-btn > button {
+            background: transparent !important;
+            border: none !important;
+            color: #9EC1FF !important;
+            text-decoration: underline;
+            font-size: .9rem;
             margin-top: 1rem;
         }
-        .secondary-btn:hover {text-decoration: underline;}
+        .link-btn > button:hover {
+            opacity: .8;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -103,44 +115,74 @@ def generate_otp() -> str:
 # --- SIGNUP ---
 def signup():
     inject_auth_css()
+    st_errors_style()
+
     with centered_container():
         st.markdown('<div class="auth-title">Create Account</div>', unsafe_allow_html=True)
 
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        confirm = st.text_input("Confirm Password", type="password")
+        # 🧾 Input Form (NO submit button inside)
+        with st.form("signup_form", clear_on_submit=False):
+            username = st.text_input("Username")
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            confirm = st.text_input("Confirm Password", type="password")
 
-        if st.button("Sign Up"):
+            form_submitted = st.form_submit_button("✓ Hidden Submit", disabled=True)  
+            # hidden / disabled just to enable form validation structure
+
+        # 🎨 Styled Main Submit Button
+        sign_btn = st.button("Sign Up")
+
+        if sign_btn:
+            # Validate Fields
+            if not username or not email or not password or not confirm:
+                st.error("All fields are required")
+                return
+            
+            if "@" not in email or "." not in email:
+                st.error("Please enter a valid email address")
+                return
+            
+            if len(password) < 6:
+                st.error("Password must be at least 6 characters long")
+                return
+            
             if password != confirm:
-                st.error("Passwords do not match.")
-                st.stop()
+                st.error("Passwords do not match")
+                return
+            
             existing_user = find_user_by_email(email)
             if existing_user:
-                st.warning("Email already registered.")
-                st.stop()
+                st.warning("Email already registered")
+                return
+
+            # Insert User in DB
             success = insert_user(username, email, password)
+
             if success:
                 try:
                     welcome_mail(email, username)
                 except Exception as e:
-                    print("Mail error:", e)
+                    print("Mail sending failed:", e)
+
+                st.success("Account created successfully!")
                 st.session_state["auth_mode"] = "login"
                 st.rerun()
             else:
-                st.error("Failed to create account. Please try again.")
-        
+                st.error("Signup failed! Try again")
+                return
+
         st.markdown("<br>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col2:
-            if st.button("Already have an account? Login", key="signup_to_login_center"):
-                st.session_state["auth_mode"] = "login"
-                st.rerun()
+        if st.button("Already have an account? Login"):
+            st.session_state["auth_mode"] = "login"
+            st.rerun()
+
 
 
 # --- LOGIN ---
 def login():
     inject_auth_css()
+    st_errors_style()
     with centered_container():
         st.markdown('<div class="auth-title">Login to CodeVerse AI</div>', unsafe_allow_html=True)
 
@@ -157,6 +199,9 @@ def login():
             user = find_user_by_email(email)
             if not user:
                 st.error("No account found.")
+            if not email or not password:
+                st.error("Please enter both email and password.")
+                return
             elif check_password(password, user["password"]):
                 # Store user identity for dashboard
                 st.session_state["user"] = {
@@ -191,14 +236,13 @@ def login():
 # --- RESET WITH OTP FLOW ---
 def reset():
     inject_auth_css()
-
+    st_errors_style()
     if "reset_step" not in st.session_state:
         st.session_state["reset_step"] = "email"
 
     step = st.session_state["reset_step"]
 
-    with centered_container():
-        # STEP 1: Enter email → Send OTP
+    with centered_container(): 
         if step == "email":
             st.markdown('<div class="auth-title">Reset Password</div>', unsafe_allow_html=True)
 
