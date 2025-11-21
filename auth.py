@@ -122,16 +122,6 @@ def signup():
     with centered_container():
         st.markdown('<div class="auth-title">Create Account</div>', unsafe_allow_html=True)
 
-        # FIX: CSS injection to reduce space above the button block
-        st.markdown("""
-        <style>
-        /* Targeting the container that holds the main Sign Up button to reduce top margin */
-        div[data-testid="stVerticalBlock"] > div:nth-child(4) > div:nth-child(1) {
-            margin-top: -1.0rem; 
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
         # 🧾 Input Form (with hidden submit to suppress warning)
         with st.form("signup_form", clear_on_submit=False):
             # Move hidden submit button to the top to reduce space
@@ -144,7 +134,9 @@ def signup():
             
             
         error_placeholder = st.empty()
-        # 🎨 Styled Main Submit Button (defined outside the form)
+        
+        # FIX 1: Negative margin div for spacing fix
+        st.markdown('<div style="margin-top: -1.0rem;"></div>', unsafe_allow_html=True)
             
         # 👇 Moved here — always visible even on error
         sign_btn = st.button("Sign Up") 
@@ -159,23 +151,21 @@ def signup():
             def show_error(msg):
                 error_placeholder.error(msg)
                 
-            # FIX: Restructure validation for robust error prioritization
+            # --- VALIDATION RESTRUCTURE ---
             
-            # 1. Password Mismatch
-            if password != confirm:
+            # 1. Primary Check: All fields must be non-empty first (High Priority)
+            if not username or not email or not password or not confirm:
+                show_error("All fields are required")
+            
+            # 2. Specific Checks: Only run if all fields are filled
+            elif password != confirm:
                 show_error("Passwords do not match")
-            # 2. Password Length (Check length only if we have a password value)
-            elif password and len(password) < 6: 
+            elif len(password) < 6: 
                 show_error("Password must be at least 6 characters long")
-            # 3. Email Format (Check format only if we have an email value)
-            elif email and ("@" not in email or "." not in email):
+            elif "@" not in email or "." not in email:
                 show_error("Please enter a valid email address")
-            # 4. Email Uniqueness
             elif find_user_by_email(email):
                 show_error("Email already registered")
-            # 5. All Fields Required (Lowest Priority / Generic catch-all)
-            elif not username or not email or not password or not confirm:
-                show_error("All fields are required")
             
             else:
                 # ---- All Good → Create Account ----
