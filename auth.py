@@ -14,99 +14,341 @@ from db import (
 from utils import password_hash
 from mail_utils import welcome_mail, send_otp_mail
 
+
+# ---------- COMMON STYLING ----------
+
 def st_errors_style():
-    st.markdown("""
-    <style>
-    .stAlert{
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-    }
-    .stAlert div[role="alert"]{
-        background-color: #D32F2F !important;
-        border-color: #B71C1C !important;
-        color:white !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-def inject_auth_css():
-    st.markdown("""
+    st.markdown(
+        """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-
-        body, .stApp {
-            background: linear-gradient(180deg, #0B1333 0%, #101D61 100%);
+        .stAlert{
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+        }
+        .stAlert div[role="alert"]{
+            background: rgba(220, 38, 38, 0.9) !important;
+            border: 1px solid rgba(185, 28, 28, 0.5) !important;
             color: white !important;
-            font-family: 'Inter', sans-serif;
         }
-
-        #MainMenu, footer {visibility: hidden;}
-
-        /* ---- CENTER CARD ---- */
-        
-        .auth-title {
-            white-space: nowrap;
-            font-size: 2.3rem;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 1.8rem; 
-        }
-
-        /* ---- INPUT FIELDS ---- */
-        div[data-testid="stTextInput"] input {
-            background-color: rgba(255,255,255,0.95);
-            border-radius: 12px;
-            border: none;
-            height: 48px;
-            font-size: 1rem;
-            color: #001A43;
-            padding-left: 14px;
-        }
-        div[data-testid="stTextInput"] > label > div > p {
-            color: #D7E2FF !important;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        /* ---- MAIN SUBMIT BUTTON ---- */
-        div.stButton>button {
-            white-space: nowrap;
-            width: 100%;
-            height: 48px;
-            font-size: 1rem;
-            border-radius: 12px;
-            background: linear-gradient(90deg, #3A66FF, #2D58E0);
-            font-weight: 700;
-        }
-
-        div.stButton>button:hover {
-            transform: translateY(-2px);
-            background: linear-gradient(90deg, #2D58E0, #3A66FF);
-            box-shadow: 0 0 12px rgba(58,102,255,0.5);
-        }
-
-        /* ---- LINK BUTTON ---- */
-        .link-btn > button {
-            background: transparent !important;
-            border: none !important;
-            color: #9EC1FF !important;
-            text-decoration: underline;
-            font-size: .9rem;
-            margin-top: 1rem;
-        }
-        .link-btn > button:hover {
-            opacity: .8;
+        .stSuccess div[role="alert"]{
+            background: rgba(34, 197, 94, 0.9) !important;
+            border: 1px solid rgba(21, 128, 61, 0.5) !important;
+            color: white !important;
         }
         </style>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-# Helper: small centered layout
-def centered_container():
-    """Creates a visually centered narrow column for forms."""
-    # This is the original implementation without the <br> tags
-    left, center, right = st.columns([1, 0.6, 1])
-    return center
+def inject_auth_css():
+    """
+    Global CSS for the auth pages.
+    Dark theme (matching landing page), compact card, no scroll.
+    """
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        :root {
+            --dark-bg: #0f172a;
+            --darker-bg: #0a0f1c;
+            --card-bg: #020617;
+            --card-inner: #020617;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --gradient-primary: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 45%, #06b6d4 100%);
+        }
+
+        /* Remove Streamlit chrome */
+        .stApp > header { display: none !important; }
+        #MainMenu, footer { visibility: hidden; }
+
+        .stApp {
+            font-family: 'Inter', sans-serif !important;
+            background: var(--darker-bg) !important;
+        }
+
+        /* Background + vertical placement */
+        [data-testid="stAppViewContainer"] {
+            background:
+                radial-gradient(circle at top, #1f2937 0, var(--dark-bg) 55%, var(--darker-bg) 100%) !important;
+        }
+
+        [data-testid="stAppViewContainer"] > .main {
+            display: flex;
+            align-items: flex-start;                 /* move card up */
+            justify-content: center;
+            min-height: 100vh;
+            padding: 32px 0 24px !important;         /* less dead space at top */
+        }
+
+        /* Compact auth card (no visible border) */
+        .main .block-container {
+            max-width: 420px !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+            padding: 2.0rem 2.3rem 2.1rem !important; /* slightly tighter top padding */
+            background: radial-gradient(circle at top left, #111827 0, #020617 55%) !important;
+            border-radius: 18px !important;
+            /* border removed for clean look */
+            box-shadow: 0 22px 42px rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+            animation: authFadeIn 0.35s ease-out;
+        }
+
+        /* remove gradient strip bar */
+        .main .block-container::before {
+            display: none !important;
+        }
+
+        @keyframes authFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Prevent scroll */
+        html, body, [data-testid="stAppViewContainer"] {
+            overflow: hidden !important;
+        }
+
+        /* HEADER ROW: brand left, form name right */
+        .auth-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1.2rem;
+            margin-bottom: 0.8rem; /* less gap under header */
+        }
+
+        .auth-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .brand-main {
+            font-size: 2.3rem !important;
+            font-weight: 900 !important;
+            background: linear-gradient(135deg, #61dafb, #bd93f9) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            line-height: 1.02;
+        }
+
+        .brand-subtitle {
+            font-size: 0.85rem !important;
+            color: #94a3b8 !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.5px;
+        }
+
+        .auth-header-right {
+            text-align: right;
+        }
+
+        .auth-title {
+            font-size: 2.0rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            justify-content: flex-end;
+        }
+
+        .auth-title-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: var(--gradient-primary);
+            box-shadow: 0 0 12px rgba(56,189,248,0.9);
+        }
+
+        .auth-mode-chip {
+            font-size: 0.75rem;
+            padding: 0.22rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+            display: inline-block;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 0.8rem;   /* smaller gap before form */
+            font-size: 1rem;
+        }
+
+        /* Form inner width to avoid full stretch */
+        .auth-inner {
+            max-width: 340px;
+            margin: 0 auto;
+        }
+
+        /* Inputs */
+        div[data-testid="stForm"] {
+            padding: 15px;
+            margin: 10px;
+           
+        }
+
+        div[data-testid="stTextInput"] {
+            margin-bottom: 0.95rem !important;
+        }
+
+        div[data-testid="stTextInput"] input {
+            background: rgba(15, 23, 42, 0.9) !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(148, 163, 184, 0.32) !important;
+            height: 44px !important;
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+            padding: 0 14px !important;
+            transition: border 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, transform 0.08s ease;
+        }
+
+        div[data-testid="stTextInput"] input:focus {
+            border-color: var(--accent-blue) !important;
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.8) !important;
+            background: rgba(15, 23, 42, 1) !important;
+            transform: translateY(-0.5px);
+        }
+
+        /* LABELS – bigger for better readability */
+        div[data-testid="stTextInput"] > label > div > p {
+            color: var(--text-secondary) !important;
+            font-size: 1.0rem !important;
+            font-weight: 600 !important;
+            margin-bottom: 0.4rem !important;
+        }
+
+        /* Buttons */
+        .stButton > button {
+            width: 100% !important;
+            height: 44px !important;
+            border-radius: 999px !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            border: none !important;
+            margin-top: 0.25rem !important;
+            background: var(--gradient-primary) !important;
+            color: #f9fafb !important;
+            box-shadow: 0 10px 22px rgba(15, 118, 238, 0.55) !important;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.1s ease;
+        }
+
+        .stButton > button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 14px 30px rgba(30, 64, 175, 0.75) !important;
+            filter: brightness(1.05);
+        }
+
+        /* Secondary style for right button in first row of columns */
+        .stForm .stColumns:nth-of-type(1) > div:nth-child(2) .stButton > button {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            border: 1px solid rgba(148, 163, 184, 0.6) !important;
+            box-shadow: none !important;
+        }
+
+        .stForm .stColumns:nth-of-type(1) > div:nth-child(2) .stButton > button:hover {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-color: var(--accent-blue) !important;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.9) !important;
+        }
+
+        /* Switch section */
+        .auth-switch {
+            text-align: center;
+        }
+
+        .auth-switch-text {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.7rem;
+            font-weight: 500;
+        }
+
+        .auth-switch-note {
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+
+        .auth-switch-note span {
+            color: #a5b4fc;
+        }
+
+        .stForm {
+            margin-bottom: 0 !important;
+        }
+
+        @media (max-width: 480px) {
+            .main .block-container {
+                max-width: 92% !important;
+                padding: 1.9rem 1.5rem 1.7rem !important;
+                border-radius: 16px !important;
+            }
+
+            .brand-main {
+                font-size: 2rem !important;
+            }
+
+            .auth-title {
+                font-size: 1.7rem;
+            }
+
+            .auth-inner {
+                max-width: 100%;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_header(title: str, chip: str, subtitle: str):
+    """
+    Top header of the card:
+    - Left: CodeVerse AI logo
+    - Right: form name + chip
+    Then subtitle below.
+    """
+    st.markdown(
+        f"""
+        <div class="auth-header">
+            <div class="auth-header-left">
+                <div class="brand-main">CodeVerse AI</div>
+                <div class="brand-subtitle">Collaborative Code Editor</div>
+            </div>
+            <div class="auth-header-right">
+                <div class="auth-title">
+                    <div class="auth-title-dot"></div>
+                    <span>{title}</span>
+                </div>
+                <div class="auth-mode-chip">{chip}</div>
+            </div>
+        </div>
+        <div class="auth-subtitle">{subtitle}</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def generate_otp() -> str:
@@ -114,237 +356,369 @@ def generate_otp() -> str:
     return f"{random.randint(100000, 999999)}"
 
 
-# --- SIGNUP ---
+# ---------- SIGNUP ----------
+
 def signup():
     inject_auth_css()
     st_errors_style()
 
-    with centered_container():
-        st.markdown('<div class="auth-title">Create Account</div>', unsafe_allow_html=True)
+    render_header(
+        title="Create Account",
+        chip="Sign up",
+        subtitle="Join our coding community and start collaborative sessions in seconds.",
+    )
 
-        # 🧾 Input Form (with hidden submit to suppress warning)
-        with st.form("signup_form", clear_on_submit=False):
-            # Move hidden submit button to the top to reduce space
-            st.form_submit_button(label=" ", disabled=True)
-            
-            username = st.text_input("Username")
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            confirm = st.text_input("Confirm Password", type="password")
-            
-            
-        error_placeholder = st.empty()
-        
-        # FIX 1: Negative margin div for spacing fix
-        st.markdown('<div style="margin-top: -1.0rem;"></div>', unsafe_allow_html=True)
-            
-        # 👇 Moved here — always visible even on error
-        sign_btn = st.button("Sign Up") 
-        login_redirect = st.button("Already have an account? Login")
-        if login_redirect:
-            st.session_state["auth_mode"] = "login"
-            st.rerun()
-
-        # ================= VALIDATION ================= #
-        if sign_btn:
-            # Redirect future messages into placeholder
-            def show_error(msg):
-                error_placeholder.error(msg)
-                
-            # --- VALIDATION RESTRUCTURE ---
-            
-            # 1. Primary Check: All fields must be non-empty first (High Priority)
-            if not username or not email or not password or not confirm:
-                show_error("All fields are required")
-            
-            # 2. Specific Checks: Only run if all fields are filled
-            elif password != confirm:
-                show_error("Passwords do not match")
-            elif len(password) < 6: 
-                show_error("Password must be at least 6 characters long")
-            elif "@" not in email or "." not in email:
-                show_error("Please enter a valid email address")
-            elif find_user_by_email(email):
-                show_error("Email already registered")
-            
-            else:
-                # ---- All Good → Create Account ----
-                success = insert_user(username, email, password)
-
-                if success:
-                    try:
-                        welcome_mail(email, username)
-                    except Exception as e:
-                        print("Mail sending failed:", e)
-
-                    st.success("Account created successfully! 🎉")
-                    st.session_state["auth_mode"] = "login"
-                    st.rerun()
-                else:
-                    show_error("Signup failed! Try again")
-#--- LOGIN ---
-def login():
-    inject_auth_css()
-    st_errors_style()
-    with centered_container():
-        st.markdown('<div class="auth-title">Login to CodeVerse AI</div>', unsafe_allow_html=True)
-
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
+    st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
+    with st.form("signup_form", clear_on_submit=True):
+        username = st.text_input("👤 Username")
+        email = st.text_input("📧 Email")
+        password = st.text_input("🔒 Password", type="password")
+        confirm = st.text_input("✅ Confirm Password", type="password")
 
         col1, col2 = st.columns(2)
         with col1:
-            login_btn = st.button("Login")
+            sign_btn = st.form_submit_button(
+                "🚀 Sign Up", use_container_width=True
+            )
         with col2:
-            forgot_btn = st.button("Forgot Password?")
+            back_btn = st.form_submit_button(
+                "← Login", use_container_width=True
+            )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        if login_btn:
-            user = find_user_by_email(email)
-            if not user:
-                st.error("No account found.")
-            if not email or not password:
-                st.error("Please enter both email and password.")
-                st.stop() 
-            elif check_password(password, user["password"]):
-                # Store user identity for dashboard
-                st.session_state["user"] = {
-                    "id": user["id"],
-                    "username": user["username"]
-                }
-                st.session_state["authenticated"] = True
-                st.session_state["auth_mode"] = "dashboard"
-                
-                # Clear inputs when rerender
-                st.session_state.pop("email", None)
-                st.session_state.pop("password", None)
+    if back_btn:
+        st.session_state["auth_mode"] = "login"
+        st.rerun()
 
-                st.rerun()  # 👈 Redirect immediately to dashboard
+    if sign_btn:
+        if not username or not email or not password or not confirm:
+            st.error("All fields are required")
+        elif password != confirm:
+            st.error("Passwords do not match")
+        elif len(password) < 6:
+            st.error("Password must be at least 6 characters")
+        elif "@" not in email or "." not in email:
+            st.error("Please enter a valid email address")
+        elif find_user_by_email(email):
+            st.error("Email already registered")
+        else:
+            success = insert_user(username, email, password)
+            if success:
+                try:
+                    welcome_mail(email, username)
+                except Exception as e:
+                    print("Mail sending failed:", e)
 
-            else:
-                st.error("Invalid password.")
-
-        if forgot_btn:
-            st.session_state["auth_mode"] = "reset"
-            for key in ["reset_step", "reset_email", "otp_cooldown_until"]:
-                st.session_state.pop(key, None)
-            st.rerun()
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 4, 1])
-        with col2:
-            if st.button("No account? Signup", key="login_to_signup_center"):
-                st.session_state["auth_mode"] = "signup"
+                st.success("🎉 Account created successfully!")
+                time.sleep(1)
+                st.session_state["auth_mode"] = "login"
                 st.rerun()
+            else:
+                st.error("Signup failed! Try again")
 
-# --- RESET WITH OTP FLOW ---
+    st.markdown(
+        """
+        <div class="auth-switch">
+            <div class="auth-switch-text">Already have an account?</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "Login to your account →",
+        key="signup_switch",
+        use_container_width=True,
+    ):
+        st.session_state["auth_mode"] = "login"
+        st.rerun()
+
+    st.markdown(
+        """
+            <div class="auth-switch-note">
+                Secured with <span>OTP verification</span> and encrypted passwords.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------- LOGIN ----------
+
+def login():
+    inject_auth_css()
+    st_errors_style()
+
+    render_header(
+        title="Welcome Back",
+        chip="Log in",
+        subtitle="Continue your coding journey with real-time collaboration.",
+    )
+
+    st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
+    with st.form("login_form"):
+        email = st.text_input("📧 Email")
+        password = st.text_input("🔒 Password", type="password")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            login_btn = st.form_submit_button(
+                "🔑 Login", use_container_width=True
+            )
+        with col2:
+            forgot_btn = st.form_submit_button(
+                "🔓 Forgot?", use_container_width=True
+            )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if forgot_btn:
+        st.session_state["auth_mode"] = "reset"
+        for key in ["reset_step", "reset_email", "otp_cooldown_until"]:
+            st.session_state.pop(key, None)
+        st.rerun()
+
+    if login_btn:
+        user = find_user_by_email(email)
+        if not email or not password:
+            st.error("Please enter both email and password.")
+        elif not user:
+            st.error("No account found with this email.")
+        elif check_password(password, user["password"]):
+            st.session_state["user"] = {
+                "id": user["id"],
+                "username": user["username"],
+            }
+            st.session_state["authenticated"] = True
+            st.session_state["auth_mode"] = "dashboard"
+
+            st.session_state.pop("email", None)
+            st.session_state.pop("password", None)
+
+            st.success("✅ Login successful!")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error("Invalid password.")
+
+    st.markdown(
+        """
+        <div class="auth-switch">
+            <div class="auth-switch-text">Don't have an account?</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "Create new account →",
+        key="login_to_signup",
+        use_container_width=True,
+    ):
+        st.session_state["auth_mode"] = "signup"
+        st.rerun()
+
+    st.markdown(
+        """
+            <div class="auth-switch-note">
+                Pro tip: use a <span>strong unique password</span> for your CodeVerse account.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------- RESET WITH OTP FLOW ----------
+
 def reset():
     inject_auth_css()
     st_errors_style()
+
     if "reset_step" not in st.session_state:
         st.session_state["reset_step"] = "email"
 
     step = st.session_state["reset_step"]
 
-    with centered_container(): 
-        if step == "email":
-            st.markdown('<div class="auth-title">Reset Password</div>', unsafe_allow_html=True)
+    if step == "email":
+        render_header(
+            title="Reset Password",
+            chip="Step 1 of 3",
+            subtitle="Enter your registered email address and we'll send you a one-time code.",
+        )
 
-            email = st.text_input("Registered Email")
+        st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
+        with st.form("reset_email_form"):
+            email = st.text_input("📧 Registered Email")
+            send_btn = st.form_submit_button(
+                "📨 Send OTP", use_container_width=True
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            if st.button("Send OTP"):
-                user = find_user_by_email(email)
-                if not user:
-                    st.error("No account found with this email.")
+        if send_btn:
+            user = find_user_by_email(email)
+            if not user:
+                st.error("No account found with this email.")
+            else:
+                otp = generate_otp()
+                expiry = int(time.time()) + 300
+                save_password_reset_otp(email, otp, expiry)
+
+                try:
+                    send_otp_mail(email, otp)
+                except Exception as e:
+                    print("OTP mail error:", e)
+                    st.error("Could not send OTP. Please try again.")
                 else:
-                    otp = generate_otp()
-                    expiry = int(time.time()) + 300  # 5 minutes
-                    save_password_reset_otp(email, otp, expiry)
+                    st.session_state["reset_email"] = email
+                    st.session_state["otp_cooldown_until"] = (
+                        int(time.time()) + 30
+                    )
+                    st.session_state["reset_step"] = "otp"
+                    st.success("✅ OTP sent to your email")
+                    st.rerun()
 
-                    try:
-                        send_otp_mail(email, otp)
-                    except Exception as e:
-                        print("OTP mail error:", e)
-                        st.error("Could not send OTP. Please try again.")
-                    else:
-                        st.session_state["reset_email"] = email
-                        st.session_state["otp_cooldown_until"] = int(time.time()) + 30  # 30s cooldown
-                        st.session_state["reset_step"] = "otp"
-                        st.success("An OTP has been sent to your email. It is valid for 5 minutes.")
-                        st.rerun()
+    elif step == "otp":
+        render_header(
+            title="Verify OTP",
+            chip="Step 2 of 3",
+            subtitle="Enter the 6-digit code sent to your email to continue.",
+        )
 
-        # STEP 2: Verify OTP
-        elif step == "otp":
-            st.markdown('<div class="auth-title">Verify OTP</div>', unsafe_allow_html=True)
-            email = st.session_state.get("reset_email", "")
-            if email:
-                st.write(f"OTP sent to: **{email}**")
+        email = st.session_state.get("reset_email", "")
+        if email:
+            st.info(f"📧 OTP sent to: **{email}**")
 
-            otp_input = st.text_input("Enter OTP")
+        st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
+        with st.form("otp_form"):
+            otp_input = st.text_input("🔢 Enter OTP")
 
             col1, col2 = st.columns(2)
             with col1:
-                verify_btn = st.button("Verify OTP")
+                verify_btn = st.form_submit_button(
+                    "✅ Verify", use_container_width=True
+                )
             with col2:
-                resend_btn = st.button("Resend OTP")
+                resend_btn = st.form_submit_button(
+                    "🔄 Resend", use_container_width=True
+                )
+        st.markdown('</div>', unsafe_allow_html=True)
 
+        if verify_btn:
+            record = get_password_reset_record(email)
             now = int(time.time())
-
-            if verify_btn:
-                record = get_password_reset_record(email)
-                if not record:
-                    st.error("No active OTP found. Please resend OTP.")
+            if not record:
+                st.error("No active OTP found. Please resend OTP.")
+            else:
+                if now > record["otp_expiry"]:
+                    st.error("OTP has expired. Please resend OTP.")
+                elif otp_input != record["otp_code"]:
+                    st.error("Invalid OTP. Please check and try again.")
                 else:
-                    if now > record["otp_expiry"]:
-                        st.error("OTP has expired. Please resend OTP.")
-                    elif otp_input != record["otp_code"]:
-                        st.error("Invalid OTP. Please check and try again.")
-                    else:
-                        st.success("OTP verified! Set your new password.")
-                        st.session_state["reset_step"] = "new_password"
-                        st.rerun()
+                    st.success("✅ OTP verified!")
+                    st.session_state["reset_step"] = "new_password"
+                    st.rerun()
 
-            if resend_btn:
-                cooldown_until = st.session_state.get("otp_cooldown_until", 0)
-                if now < cooldown_until:
-                    remaining = cooldown_until - now
-                    st.warning(f"Please wait {remaining} seconds before resending OTP.")
+        if resend_btn:
+            now = int(time.time())
+            cooldown_until = st.session_state.get("otp_cooldown_until", 0)
+            if now < cooldown_until:
+                remaining = cooldown_until - now
+                st.warning(f"⏰ Wait {remaining}s before resending")
+            else:
+                otp = generate_otp()
+                expiry = int(time.time()) + 300
+                save_password_reset_otp(email, otp, expiry)
+                try:
+                    send_otp_mail(email, otp)
+                except Exception as e:
+                    print("OTP mail resend error:", e)
+                    st.error("Could not resend OTP. Please try again.")
                 else:
-                    otp = generate_otp()
-                    expiry = int(time.time()) + 300
-                    save_password_reset_otp(email, otp, expiry)
-                    try:
-                        send_otp_mail(email, otp)
-                    except Exception as e:
-                        print("OTP mail resend error:", e)
-                        st.error("Could not resend OTP. Please try again.")
-                    else:
-                        st.success("A new OTP has been sent to your email.")
-                        st.session_state["otp_cooldown_until"] = int(time.time()) + 30
+                    st.success("✅ New OTP sent!")
+                    st.session_state["otp_cooldown_until"] = (
+                        int(time.time()) + 30
+                    )
 
-        # STEP 3: Set New Password
-        elif step == "new_password":
-            st.markdown('<div class="auth-title">Set New Password</div>', unsafe_allow_html=True)
+    elif step == "new_password":
+        render_header(
+            title="New Password",
+            chip="Step 3 of 3",
+            subtitle="Create a new password for your CodeVerse account.",
+        )
 
-            new_pw = st.text_input("New Password", type="password")
-            confirm_pw = st.text_input("Confirm New Password", type="password")
+        st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
+        with st.form("new_password_form"):
+            new_pw = st.text_input("🔒 New Password", type="password")
+            confirm_pw = st.text_input(
+                "✅ Confirm Password", type="password"
+            )
 
-            if st.button("Reset Password"):
-                email = st.session_state.get("reset_email")
-                if not email:
-                    st.error("Something went wrong. Please restart the reset process.")
-                elif new_pw != confirm_pw:
-                    st.warning("Passwords do not match.")
+            reset_btn = st.form_submit_button(
+                "🔄 Reset", use_container_width=True
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if reset_btn:
+            email = st.session_state.get("reset_email")
+            if not email:
+                st.error("Something went wrong. Please restart.")
+            elif new_pw != confirm_pw:
+                st.warning("Passwords do not match.")
+            else:
+                updated = update_password(email, new_pw)
+                if updated:
+                    clear_password_reset(email)
+                    st.success("✅ Password reset successful!")
+                    for key in [
+                        "reset_step",
+                        "reset_email",
+                        "otp_cooldown_until",
+                    ]:
+                        st.session_state.pop(key, None)
+                    time.sleep(1)
+                    st.session_state["auth_mode"] = "login"
+                    st.rerun()
                 else:
-                    updated = update_password(email, new_pw)
-                    if updated:
-                        clear_password_reset(email)
-                        st.success("✅ Password reset successful! Please log in.")
-                        for key in ["reset_step", "reset_email", "otp_cooldown_until"]:
-                            st.session_state.pop(key, None)
-                        st.session_state["auth_mode"] = "login"
-                        st.rerun()
-                    else:
-                        st.error("Something went wrong while updating password.")
+                    st.error("Failed to update password.")
 
-        # Back link (works together with app.py's back button)
-        st.markdown('<a class="secondary-btn" href="?login">← Back to Login</a>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-switch">', unsafe_allow_html=True)
+
+    if st.button(
+        "← Back to Login",
+        key="reset_to_login",
+        use_container_width=True,
+    ):
+        st.session_state["auth_mode"] = "login"
+        st.rerun()
+
+    st.markdown(
+        """
+        <div class="auth-switch-note">
+            Forgot which email you used? Try your primary college or work ID first.
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------- ROUTER / ENTRY ----------
+
+def main():
+    if "auth_mode" not in st.session_state:
+        st.session_state["auth_mode"] = "login"
+
+    mode = st.session_state["auth_mode"]
+
+    if mode == "login":
+        login()
+    elif mode == "signup":
+        signup()
+    elif mode == "reset":
+        reset()
+    else:
+        # Replace this with your dashboard logic
+        st.write("Dashboard placeholder")
+
+
+if __name__ == "__main__":
+    main()
