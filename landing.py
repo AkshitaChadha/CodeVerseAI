@@ -89,8 +89,8 @@ def inject_custom_css():
         
         .navbar-right { 
             display: flex; 
-            align-items: center; 
-            gap: 25px; 
+            align-items: center;
+            gap: 25px;
         }
         
         .nav-link { 
@@ -166,7 +166,7 @@ def inject_custom_css():
         .hero-left h2 { 
             font-size: 3.5rem; 
             font-weight: 900; 
-            line-height: 1.1; 
+            line-height: 1.5; 
             margin-bottom: 1.5rem;
         }
         
@@ -508,9 +508,8 @@ def app_main():
                 <div class="brand-subtitle">Collaborative Code Editor</div>
             </div>
             <div class="navbar-right">
-                <a href="#" class="nav-link">Features</a>
-                <a href="#" class="nav-link">Pricing</a>
                 <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-link">Features</a>
                 <a href="#" class="nav-link">Contact</a>
                 <a href="?login" class="nav-btn-secondary">Login</a>
                 <a href="?signup" class="nav-btn-primary">Get Started</a>
@@ -522,8 +521,9 @@ def app_main():
     st.markdown("""
         <div class="hero">
             <div class="hero-left">
-                <h2>Code 10x Faster with AI Power</h2>
-                <p>Generate, refactor, and debug code instantly across all your favorite frameworks. The future of coding is here.</p>
+                <h2>Collaborate Smarter <br>Code Better <br>That’s CodeVerse AI
+</h2>
+                <p>Write, optimize, and debug together — with AI intelligence that keeps everyone aligned. The new era of collaboration has arrived.</p>
                 <a href="?signup" class="btn-primary">Start Coding</a>
             </div>
             <div class="hero-right">
@@ -559,8 +559,8 @@ def app_main():
                 <div class="stat-label">Faster Coding</div>
             </div>
             <div class="stat-item">
-                <div class="stat-number">10K+</div>
-                <div class="stat-label">Global Users</div>
+                <div class="stat-number">60%</div>
+                <div class="stat-label">Team Boost</div>
             </div>
             <div class="stat-item">
                 <div class="stat-number">24/7</div>
@@ -580,9 +580,7 @@ def app_main():
             <div class="about-content">
                 <h3>Why CodeVerse AI Stands Out</h3>
                 <p class="about-desc">
-                    We're not just another coding tool - we're your AI pair programmer that understands context, 
-                    learns your style, and helps you write better code faster. From beginners to senior developers, 
-                    everyone levels up with CodeVerse.
+                    We're not just another collaborative editor — we're your AI-powered coding teammate. CodeVerse keeps everyone in sync, understands your project context, adapts to your workflow, and helps your team solve problems faster. From classroom assignments to real-world software builds, every developer levels up — together.
                 </p>
                 <div class="stats">
                     <div class="stat">
@@ -730,5 +728,5 @@ def app_main():
         st.rerun()
 
 # --- Run Page ---
-if __name__ == "__main__":
+if __name__ == "_main_":
     app_main()
