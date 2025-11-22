@@ -10,6 +10,7 @@ from db import (
     save_password_reset_otp,
     get_password_reset_record,
     clear_password_reset,
+    record_login,   # 🔹 NEW: for streaks
 )
 from utils import password_hash
 from mail_utils import welcome_mail, send_otp_mail
@@ -96,7 +97,6 @@ def inject_auth_css():
             padding: 2.0rem 2.3rem 2.1rem !important; /* slightly tighter top padding */
             background: radial-gradient(circle at top left, #111827 0, #020617 55%) !important;
             border-radius: 18px !important;
-            /* border removed for clean look */
             box-shadow: 0 22px 42px rgba(15, 23, 42, 0.9) !important;
             backdrop-filter: blur(16px);
             position: relative;
@@ -104,7 +104,6 @@ def inject_auth_css():
             animation: authFadeIn 0.35s ease-out;
         }
 
-        /* remove gradient strip bar */
         .main .block-container::before {
             display: none !important;
         }
@@ -131,7 +130,7 @@ def inject_auth_css():
             align-items: flex-start;
             justify-content: space-between;
             gap: 1.2rem;
-            margin-bottom: 0.8rem; /* less gap under header */
+            margin-bottom: 0.8rem;
         }
 
         .auth-header-left {
@@ -190,21 +189,18 @@ def inject_auth_css():
 
         .auth-subtitle {
             color: var(--text-secondary);
-            margin-bottom: 0.8rem;   /* smaller gap before form */
+            margin-bottom: 0.8rem;
             font-size: 1rem;
         }
 
-        /* Form inner width to avoid full stretch */
         .auth-inner {
             max-width: 340px;
             margin: 0 auto;
         }
 
-        /* Inputs */
         div[data-testid="stForm"] {
             padding: 15px;
             margin: 10px;
-           
         }
 
         div[data-testid="stTextInput"] {
@@ -229,7 +225,6 @@ def inject_auth_css():
             transform: translateY(-0.5px);
         }
 
-        /* LABELS – bigger for better readability */
         div[data-testid="stTextInput"] > label > div > p {
             color: var(--text-secondary) !important;
             font-size: 1.0rem !important;
@@ -237,7 +232,6 @@ def inject_auth_css():
             margin-bottom: 0.4rem !important;
         }
 
-        /* Buttons */
         .stButton > button {
             width: 100% !important;
             height: 44px !important;
@@ -258,7 +252,6 @@ def inject_auth_css():
             filter: brightness(1.05);
         }
 
-        /* Secondary style for right button in first row of columns */
         .stForm .stColumns:nth-of-type(1) > div:nth-child(2) .stButton > button {
             background: transparent !important;
             color: var(--text-primary) !important;
@@ -272,7 +265,6 @@ def inject_auth_css():
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.9) !important;
         }
 
-        /* Switch section */
         .auth-switch {
             text-align: center;
         }
@@ -324,12 +316,6 @@ def inject_auth_css():
 
 
 def render_header(title: str, chip: str, subtitle: str):
-    """
-    Top header of the card:
-    - Left: CodeVerse AI logo
-    - Right: form name + chip
-    Then subtitle below.
-    """
     st.markdown(
         f"""
         <div class="auth-header">
@@ -352,7 +338,6 @@ def render_header(title: str, chip: str, subtitle: str):
 
 
 def generate_otp() -> str:
-    """Generate a 6-digit OTP as string."""
     return f"{random.randint(100000, 999999)}"
 
 
@@ -410,7 +395,6 @@ def signup():
                     print("Mail sending failed:", e)
 
                 st.success("🎉 Account created successfully!")
-                time.sleep(1)
                 st.session_state["auth_mode"] = "login"
                 st.rerun()
             else:
@@ -491,11 +475,17 @@ def login():
             st.session_state["authenticated"] = True
             st.session_state["auth_mode"] = "dashboard"
 
+            # 🔹 record login for streaks
+            try:
+                record_login(user["id"])
+            except Exception as e:
+                print("record_login error:", e)
+
             st.session_state.pop("email", None)
             st.session_state.pop("password", None)
 
             st.success("✅ Login successful!")
-            time.sleep(1)
+            # 🔹 removed extra sleep to make transition snappy
             st.rerun()
         else:
             st.error("Invalid password.")
@@ -674,7 +664,6 @@ def reset():
                         "otp_cooldown_until",
                     ]:
                         st.session_state.pop(key, None)
-                    time.sleep(1)
                     st.session_state["auth_mode"] = "login"
                     st.rerun()
                 else:
@@ -716,8 +705,9 @@ def main():
     elif mode == "reset":
         reset()
     else:
-        # Replace this with your dashboard logic
-        st.write("Dashboard placeholder")
+        # 🔹 When authenticated, show dashboard
+        from dashboard import dashboard
+        dashboard()
 
 
 if __name__ == "__main__":
