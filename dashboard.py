@@ -23,7 +23,7 @@ load_dotenv()
 init_db()
 
 # Local editor frontend (port 5000 for local)
-EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "http://localhost:5000")
+EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
 
 
 def dashboard():
