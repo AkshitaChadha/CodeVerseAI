@@ -302,6 +302,60 @@ def create_project_file(project_id, filename, language="javascript"):
     return {"id": row["id"], "room_id": row["room_id"]}
 
 
+def delete_project(project_id):
+    """
+    Delete a project AND its files.
+    CASCADE already deletes files if foreign key is configured, 
+    but we delete manually for safety across all DB setups.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM project_files WHERE project_id = %s", (project_id,))
+        cur.execute("DELETE FROM projects WHERE id = %s", (project_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("delete_project error:", e)
+        return False
+    finally:
+        conn.close()
+
+
+def delete_project_file(file_id):
+    """
+    Delete a single file from project_files table.
+    Also decrease the files_count of its project.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        # get project_id for decrement
+        cur.execute("SELECT project_id FROM project_files WHERE id = %s", (file_id,))
+        row = cur.fetchone()
+        if not row:
+            return False
+        project_id = row["project_id"]
+
+        # delete file
+        cur.execute("DELETE FROM project_files WHERE id = %s", (file_id,))
+
+        # update project metadata
+        cur.execute(
+            "UPDATE projects SET files_count = GREATEST(files_count - 1, 0) WHERE id = %s",
+            (project_id,),
+        )
+
+        conn.commit()
+        return True
+    except Exception as e:
+        print("delete_project_file error:", e)
+        return False
+    finally:
+        conn.close()
+
+
+
 # ====================
 # STREAK / LOGIN HELPERS
 # ====================
