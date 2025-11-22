@@ -1,11 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import plotly.express as px
 from groq import Groq
 from dotenv import load_dotenv
 import os
 import uuid
+import random
 
 from db import (
     init_db,
@@ -15,15 +15,35 @@ from db import (
     create_project,
     create_project_file,
     get_current_streak,
+    delete_project,
+    delete_project_file,
 )
 
 # ---------- INIT ----------
-
 load_dotenv()
 init_db()
 
-# Local editor frontend (port 5000 for local)
-EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
+# Editor frontend (local/remote)
+EDITOR_FRONTEND_URL = os.getenv(
+    "EDITOR_FRONTEND_URL",
+    "https://codeverseai-editor.vercel.app",
+)
+
+# Coding tips and shortcuts data
+CODING_TIPS = [
+    {"title": "🚀 Git Commit", "desc": "Use git commit -m \"descriptive message\" for better version control"},
+    {"title": "⚡ VS Code Shortcut", "desc": "Ctrl/Cmd + D selects the next occurrence of the current selection"},
+    {"title": "🐍 Python Tip", "desc": "Use list comprehensions for cleaner and faster list operations"},
+    {"title": "🔧 Debugging", "desc": "Use console.log() in JS or print() in Python for quick debugging"},
+    {"title": "📝 Code Formatting", "desc": "Use Prettier for JS/TS or Black for Python to maintain consistent code style"},
+    {"title": "🎯 Git Branch", "desc": "Create feature branches with git checkout -b feature/name for better workflow"},
+    {"title": "💡 VS Code Tip", "desc": "Ctrl/Cmd + Shift + P opens command palette for quick actions"},
+    {"title": "🔍 Quick Search", "desc": "Use Ctrl/Cmd + F to find and Ctrl/Cmd + H to replace in most editors"},
+    {"title": "📚 Documentation", "desc": "Always document your functions with clear docstrings or JSDoc comments"},
+    {"title": "🚀 Terminal Power", "desc": "Use cd - to switch to previous directory in terminal"},
+    {"title": "🐞 Debug Pro Tip", "desc": "Use breakpoints in browser dev tools or IDE for step-by-step debugging"},
+    {"title": "⚡ Performance", "desc": "Avoid nested loops when possible - time complexity matters!"}
+]
 
 
 def dashboard():
@@ -39,14 +59,23 @@ def dashboard():
     user_id = user_info["id"]
     username = user_info["username"]
 
+    # --------- LOAD GROQ & CHAT MEMORY ----------
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+    if "chatbot_messages" not in st.session_state:
+        st.session_state.chatbot_messages = [
+            {
+                "role": "assistant",
+                "content": "Welcome to CodeVerse AI. How can I help you today? 😊",
+            }
+        ]
+
     # --------- CHECK IF THIS IS CHAT POPUP MODE ----------
     params = st.query_params
     is_chat_mode = params.get("chat", "0") == "1"
 
-    # ========== INLINE CHAT MODE (POPUP) ==========
     if is_chat_mode:
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
+        # Hide Streamlit chrome
         st.markdown(
             """
             <style>
@@ -60,17 +89,11 @@ def dashboard():
             unsafe_allow_html=True,
         )
 
-        if "chatbot_messages" not in st.session_state:
-            st.session_state.chatbot_messages = [
-                {
-                    "role": "assistant",
-                    "content": "Welcome to CodeVerse AI. How can I help you today? 😊",
-                }
-            ]
-
+        # Show chat history
         for msg in st.session_state.chatbot_messages:
             st.chat_message(msg["role"]).write(msg["content"])
 
+        # Chat input
         user_input = st.chat_input("Type your message...")
 
         if user_input:
@@ -79,10 +102,12 @@ def dashboard():
                 {"role": "user", "content": user_input}
             )
 
+            # Typing animation
             typing_msg = st.chat_message("assistant")
             typing_placeholder = typing_msg.empty()
             typing_placeholder.write(" typing...")
 
+            # Call Groq model
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
@@ -95,12 +120,14 @@ def dashboard():
             )
             reply = response.choices[0].message.content
 
+            # Replace typing animation
             typing_placeholder.empty()
             st.chat_message("assistant").write(reply)
             st.session_state.chatbot_messages.append(
                 {"role": "assistant", "content": reply}
             )
 
+        # Clear chat
         if st.button(" Clear Conversation"):
             st.session_state.chatbot_messages = [
                 {
@@ -127,11 +154,17 @@ def dashboard():
     total_lines = stats.get("total_lines", 0)
     total_files = stats.get("total_files", 0)
 
-    # which project card is currently in “add file” mode
+    avg_files = float(total_files) / total_projects if total_projects else 0.0
+
+    # which project card is currently in "add file" mode
     if "show_add_file_for" not in st.session_state:
         st.session_state["show_add_file_for"] = None
 
-    # --------- CSS ----------
+    # Get random coding tips
+    if "coding_tips" not in st.session_state:
+        st.session_state.coding_tips = random.sample(CODING_TIPS, 4)
+
+    # --------- ENHANCED CSS ----------
     st.markdown(
         """
     <style>
@@ -147,6 +180,7 @@ def dashboard():
         color: white;
         padding-top: 20px;
         border-right: 1px solid #334155;
+        overflow: hidden !important;
     }
     
     [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
@@ -166,6 +200,7 @@ def dashboard():
         color: #f8fafc !important;
     }
 
+    /* Original Metric Cards with Hover */
     .metric-card {
         background: #1e293b;
         border: 1px solid #334155;
@@ -193,215 +228,352 @@ def dashboard():
         -webkit-text-fill-color: transparent;
     }
 
+    /* Enhanced Buttons */
     .stButton>button {
         background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
         color: white;
-        border-radius: 10px;
-        padding: 10px 18px;
+        border-radius: 12px;
+        padding: 12px 20px;
         border: none;
         font-weight: 600;
         transition: all 0.3s ease;
         box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-        font-size: 13px;
+        font-size: 14px;
     }
     .stButton>button:hover {
-        transform: translateY(-1px);
+        transform: translateY(-2px);
         box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5);
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-        color: white;
-    }
-    
-    .collab-box {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 16px;
-        padding: 16px;
-        color: #f8fafc;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-        margin-bottom: 12px;
     }
 
-    .collab-item {
-        background: rgba(139, 92, 246, 0.1);
-        padding: 8px 10px;
-        border-radius: 10px;
-        margin-bottom: 6px;
-        border-left: 4px solid #8b5cf6;
-        font-weight: 500;
-        font-size: 13px;
-    }
-    
+    /* Enhanced Navigation */
     .nav-btn {
         display: block;
         width: 100%;
         background-color: transparent;
         color: #cbd5e1;
         text-align: left;
-        padding: 12px 16px;
+        padding: 14px 18px;
         border: none;
-        border-radius: 8px;
+        border-radius: 12px;
         font-size: 15px;
         margin-bottom: 8px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         font-weight: 500;
     }
     .nav-btn:hover {
         background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
         color: white;
-        transform: translateX(5px);
+        transform: translateX(8px);
     }
     .nav-btn.active {
         background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
         color: white;
         font-weight: 600;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
     }
 
-    .green-btn {
-        display: block;
-        width: 100%;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        font-size: 15px;
-        font-weight: 600;
-        padding: 11px 16px;
-        margin-top: 15px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .green-btn:hover {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        color: white;
-        transform: translateY(-2px);
-    }
-
-    .logout-btn {
-        display: block;
-        width: 100%;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-        border: none;
-        border-radius: 50px;
-        font-size: 15px;
-        padding: 11px 16px;
-        margin-top: 15px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: 0.3s ease;
-    }
-    .logout-btn:hover {
-        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        transform: translateY(-2px);
-    }
-
-    /* Project big card */
-    .project-card-big {
-        background: #020617;
+    /* Enhanced Project Cards */
+    .project-card {
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
         border-radius: 16px;
         border: 1px solid #1f2937;
-        padding: 14px 16px 12px 16px;
-        box-shadow: 0 12px 35px rgba(15,23,42,0.7);
-        margin-bottom: 18px;
+        padding: 20px;
+        box-shadow: 0 8px 32px rgba(15,23,42,0.75);
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+        position: relative;
     }
-    .project-header-row {
+    .project-card:hover {
+        transform: translateY(-3px);
+        border-color: #8b5cf6;
+        box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
+    }
+    .project-card-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 4px;
+        margin-bottom: 12px;
     }
     .project-title-left {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
     }
     .project-title-left span.name {
-        font-size: 15px;
-        font-weight: 600;
-        color: #e5e7eb;
+        font-size: 18px;
+        font-weight: 700;
+        color: #f1f5f9;
     }
     .project-meta {
-        font-size: 11px;
-        color: #9ca3af;
-    }
-    .project-plus-btn {
-        background: #0f172a;
-        border-radius: 999px;
-        border: 1px solid #4b5563;
-        padding: 4px 10px;
         font-size: 12px;
-        color: #e5e7eb;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
+        color: #94a3b8;
+        background: rgba(30, 41, 59, 0.5);
+        padding: 4px 10px;
+        border-radius: 20px;
     }
-    .project-plus-btn:hover {
-        background: #4f46e5;
-        border-color: #4f46e5;
-        color: #ffffff;
+    .project-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
     }
 
-    .file-row-thin {
-        font-size: 13px;
-        padding: 4px 0;
-        border-bottom: 1px solid rgba(31,41,55,0.65);
+    /* Compact Delete Buttons */
+    .compact-delete-btn {
+        background: transparent !important;
+        border: 1px solid #ef4444 !important;
+        border-radius: 6px !important;
+        padding: 2px 2px !important;
+        color: #ef4444 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-size: 10px !important;
+        min-height: unset !important;
+        height: 24px !important;
+        width: 5px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
-    .file-row-thin:last-child {
-        border-bottom: none;
+    .compact-delete-btn:hover {
+        background: #ef4444 !important;
+        color: white !important;
+        transform: scale(1.1) !important;
     }
-    .file-row-thin strong {
+
+    .compact-add-btn {
+        background: transparent !important;
+        border: 1px solid #10b981 !important;
+        border-radius: 6px !important;
+        padding: 2px 2px !important;
+        color: #10b981 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-size: 10px !important;
+        min-height: unset !important;
+        height: 24px !important;
+        width: 5px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .compact-add-btn:hover {
+        background: #10b981 !important;
+        color: white !important;
+        transform: scale(1.1) !important;
+    }
+
+    /* Enhanced File Rows */
+    .file-row {
+        font-size: 14px;
+        padding: 12px 0;
+        border-top: 1px solid rgba(31,41,55,0.75);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s ease;
+    }
+    .file-row:hover {
+        background: rgba(30, 41, 59, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 0 -8px;
+    }
+    .file-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .file-name {
         color: #e5e7eb;
+        font-weight: 600;
     }
-    .file-row-thin span.lang {
+    .file-lang {
         color: #9ca3af;
         font-size: 11px;
-        margin-left: 4px;
-    }
-    .file-open-pill {
-        font-size: 11px;
+        background: rgba(30, 41, 59, 0.5);
         padding: 2px 8px;
-        border-radius: 999px;
+        border-radius: 12px;
+    }
+    .file-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .file-open-btn {
+        font-size: 12px;
+        padding: 6px 14px;
+        border-radius: 20px;
         border: 1px solid #4b5563;
         color: #e5e7eb;
         text-decoration: none;
-        margin-left: 8px;
-    }
-    .file-open-pill:hover {
-        background: #4f46e5;
-        border-color: #4f46e5;
-        color: #ffffff;
-    }
-
-    /* Quick AI buttons inside card */
-    .ai-quick-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 10px;
-    }
-    .ai-quick-btn {
-        width: 100%;
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-        color: #ffffff;
-        border-radius: 10px;
-        padding: 8px 10px;
-        border: none;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(139,92,246,0.25);
         transition: all 0.2s ease;
     }
-    .ai-quick-btn:hover {
+    .file-open-btn:hover {
+        background: #8b5cf6;
+        border-color: #8b5cf6;
+        color: #ffffff;
         transform: translateY(-1px);
-        box-shadow: 0 8px 20px rgba(139,92,246,0.40);
     }
-    .ai-quick-btn:active {
-        transform: translateY(0px) scale(0.98);
+
+    /* Enhanced AI Actions - Border around entire section */
+    .ai-actions-container {
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+        border-radius: 20px;
+        border: 2px solid #334155;
+        padding: 25px;
+        margin: 20px 0;
+        position: relative;
+        overflow: hidden;
+    }
+    .ai-actions-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+    }
+    .ai-actions-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .ai-actions-icon {
+        font-size: 28px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .ai-actions-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0;
+    }
+    .ai-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+    .ai-action-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border: 1px solid #475569;
+        text-decoration: none !important;
+        color: inherit;
+    }
+    .ai-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+        border-color: #8b5cf6;
+        text-decoration: none !important;
+    }
+    .ai-action-icon {
+        font-size: 28px;
+        margin-bottom: 10px;
+        text-decoration: none !important;
+    }
+    .ai-action-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #e2e8f0;
+        text-decoration: none !important;
+    }
+
+    /* Remove underlines from all links in AI actions */
+    .ai-action-card, .ai-action-card:hover, .ai-action-card:visited {
+        text-decoration: none !important;
+    }
+
+    /* Coding Tips Section with Refresh Button */
+    .tips-section {
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+        border-radius: 20px;
+        border: 2px solid #334155;
+        padding: 24px;
+        margin: 20px 0;
+        box-shadow: 0 8px 32px rgba(15,23,42,0.7);
+        position: relative;
+    }
+    .tips-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .tips-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0;
+    }
+    .refresh-tips-btn {
+        background: transparent;
+        border: 1px solid #8b5cf6;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: #8b5cf6;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .refresh-tips-btn:hover {
+        background: #8b5cf6;
+        color: white;
+        transform: rotate(15deg);
+    }
+    .tips-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    .tip-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #475569;
+        transition: all 0.3s ease;
+    }
+    .tip-card:hover {
+        transform: translateY(-2px);
+        border-color: #8b5cf6;
+    }
+    .tip-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 8px;
+    }
+    .tip-card-desc {
+        font-size: 14px;
+        color: #94a3b8;
+        line-height: 1.4;
+    }
+
+    /* Delete Confirmation */
+    .delete-confirm {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid #ef4444;
+        border-radius: 12px;
+        padding: 16px;
+        margin: 12px 0;
+    }
+
+    /* Fixed Chat Button */
+    .fixed-chat {
+        position: fixed !important;
+        bottom: 25px !important;
+        right: 25px !important;
+        z-index: 999999 !important;
     }
     </style>
     """,
@@ -412,15 +584,15 @@ def dashboard():
     with st.sidebar:
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 30px;">
-                <div style="font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #61dafb, #bd93f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #61dafb, #bd93f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px;">
                     CodeVerse AI
                 </div>
-                <div style="font-size: 12px; color: #bd93f9; font-weight: 500;">
+                <div style="font-size: 14px; color: #bd93f9; font-weight: 500; letter-spacing: 0.5px;">
                     Collaborative Code Editor
                 </div>
             </div>
-        """,
+            """,
             unsafe_allow_html=True,
         )
 
@@ -430,18 +602,14 @@ def dashboard():
         )
 
         st.markdown(
-            "<button class='nav-btn active'>🏠 Overview</button>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            "<button class='nav-btn'>📁 My Projects</button>",
+            "<button class='nav-btn active'>🏠 Dashboard</button>",
             unsafe_allow_html=True,
         )
 
         st.markdown(
             f"""
 <a href="{EDITOR_FRONTEND_URL}/" target="_blank" style="text-decoration: none;">
-    <button class='nav-btn' style="width: 100%;">👨‍💻 Open Editor Home</button>
+    <button class='nav-btn'>👨‍💻 Code Editor</button>
 </a>
 """,
             unsafe_allow_html=True,
@@ -452,26 +620,41 @@ def dashboard():
         )
 
         st.markdown(
-            "<hr style='border:1px solid #334155;'>", unsafe_allow_html=True
-        )
-
-        st.markdown(
-            "<button class='green-btn'>➕ Create New Project</button>",
+            "<hr style='border:1px solid #334155; margin: 20px 0;'>",
             unsafe_allow_html=True,
         )
 
+        # Quick Stats in Sidebar
         st.markdown(
-            "<hr style='border:1px solid #334155;'>", unsafe_allow_html=True
+            f"""
+            <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px;">
+                <div style="font-size: 14px; color: #94a3b8; margin-bottom: 8px;">Quick Stats</div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                    <span>Projects: <strong style="color: #8b5cf6;">{total_projects}</strong></span>
+                    <span>Files: <strong style="color: #8b5cf6;">{total_files}</strong></span>
+                    <span>Streak: <strong style="color: #8b5cf6;">{current_streak}🔥</strong></span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-        if st.button("🚪 Logout", key="logout_sidebar"):
+        # Logout
+        if st.button("🚪 Logout", key="logout_sidebar_btn", use_container_width=True):
             for k in ["user", "authenticated", "auth_mode"]:
                 st.session_state.pop(k, None)
             st.rerun()
 
-    # --------- MAIN: WELCOME + METRICS ----------
-    st.markdown(f"## 👋 Welcome back, *{username}!*")
+    # --------- MAIN CONTENT ----------
+    
+    # Welcome Section
+    st.markdown(f"# 👋 Welcome, {username}!")
+    st.markdown(
+        "<p style='color:#94a3b8;font-size:16px;margin-top:-8px;margin-bottom:30px;'>Ready to code something amazing today?</p>",
+        unsafe_allow_html=True,
+    )
 
+    # Original Style Metrics with Hover
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(
@@ -490,277 +673,317 @@ def dashboard():
         )
     with m4:
         st.markdown(
-            f'<div class="metric-card"><div class="metric-title">📏 Total Lines of Code</div><div class="metric-value">{total_lines}</div></div>',
+            f'<div class="metric-card"><div class="metric-title">📊 Avg Files / Project</div><div class="metric-value">{avg_files:.1f}</div></div>',
             unsafe_allow_html=True,
         )
 
-    # soft spacer
-    st.markdown("<div style='height:18px;'></div>", unsafe_allow_html=True)
+    # Enhanced Quick AI Actions with Border and Improved Layout
+    def quick_room_link(action_slug: str) -> str:
+        room_id = uuid.uuid4().hex
+        return f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}&from={action_slug}"
 
-    # ================== PROJECT SECTION ==================
+    ai_actions_html = f"""
+    <div class="ai-actions-container">
+        <div class="ai-actions-header">
+            <div class="ai-actions-icon">⚡</div>
+            <h3 class="ai-actions-title">Quick AI Actions</h3>
+        </div>
+        <div class="ai-actions-grid">
+            <a class="ai-action-card" href="{quick_room_link('explain')}" target="_blank">
+                <div class="ai-action-icon">🧠</div>
+                <div class="ai-action-title">Explain Code</div>
+            </a>
+            <a class="ai-action-card" href="{quick_room_link('debug')}" target="_blank">
+                <div class="ai-action-icon">🐞</div>
+                <div class="ai-action-title">Debug Code</div>
+            </a>
+            <a class="ai-action-card" href="{quick_room_link('docs')}" target="_blank">
+                <div class="ai-action-icon">📝</div>
+                <div class="ai-action-title">Generate Docs</div>
+            </a>
+            <a class="ai-action-card" href="{quick_room_link('optimize')}" target="_blank">
+                <div class="ai-action-icon">⚡</div>
+                <div class="ai-action-title">Optimize Code</div>
+            </a>
+        </div>
+    </div>
+    """
+    st.markdown(ai_actions_html, unsafe_allow_html=True)
+
+    # Enhanced Projects Section
     st.markdown("### 📁 Your Projects")
-
-    # new project form
-    with st.form("create_project_form"):
-        c1, c2 = st.columns([4, 1])
-        with c1:
+    
+    # Create Project Form
+    with st.form("create_project_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns([2, 1, 1])
+        with col1:
             new_project_name = st.text_input(
-                "Project name", placeholder="My awesome project"
+                "Project name", 
+                placeholder="My awesome project",
+                label_visibility="collapsed"
             )
-        with c2:
-            create_project_btn = st.form_submit_button("Create")
+        with col2:
+            project_language = st.selectbox(
+                "Language",
+                ["python", "javascript", "java", "cpp", "html"],
+                label_visibility="collapsed"
+            )
+        with col3:
+            create_project_btn = st.form_submit_button(
+                "🚀 Create Project",
+                use_container_width=True
+            )
+        
         if create_project_btn:
             if not new_project_name.strip():
                 st.warning("Please enter a project name.")
             else:
                 create_project(user_id, new_project_name.strip())
-                st.success(f"Project **{new_project_name}** created.")
+                st.success(f"Project *{new_project_name}* created successfully!")
                 st.rerun()
 
-    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
 
     if not projects:
-        st.info("You don't have any projects yet. Create one above to get started.")
+        st.info("🌟 You don't have any projects yet. Create your first project above to get started!")
     else:
+        # Enhanced Projects Grid
         for project in projects:
             files = get_project_files(project["id"]) or []
-
-            st.markdown('<div class="project-card-big">', unsafe_allow_html=True)
-
-            header_col1, header_col2 = st.columns([4, 1])
-            with header_col1:
-                st.markdown(
-                    f"""
-                    <div class="project-header-row">
-                        <div class="project-title-left">
-                            <span>📁</span>
-                            <span class="name">{project['name']}</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"<div class='project-meta'>{len(files)} file(s)</div>",
-                    unsafe_allow_html=True,
-                )
-
-            with header_col2:
-                add_clicked = st.button(
-                    "➕ File",
-                    key=f"project_add_btn_{project['id']}",
-                    help="Add a new file to this project",
-                )
-                if add_clicked:
-                    st.session_state["show_add_file_for"] = project["id"]
-
-            # thin file rows
-            if files:
-                for f in files:
-                    file_lang = f.get("language", "code")
-                    editor_url = (
-                        f"{EDITOR_FRONTEND_URL}/editor/{f['room_id']}?username={username}"
-                    )
+            
+            with st.container():
+                st.markdown('<div class="project-card">', unsafe_allow_html=True)
+                
+                # Project Header
+                col1, col2 = st.columns([3, 1])
+                with col1:
                     st.markdown(
                         f"""
-                        <div class="file-row-thin">
-                            📄 <strong>{f['filename']}</strong>
-                            <span class="lang">{file_lang.upper()}</span>
-                            <a class="file-open-pill" href="{editor_url}" target="_blank">Open</a>
+                        <div class="project-card-header">
+                            <div class="project-title-left">
+                                <span>📁</span>
+                                <span class="name">{project['name']}</span>
+                                <span class="project-meta">{len(files)} files</span>
+                            </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-            else:
-                st.markdown(
-                    "<div style='font-size:11px;color:#6b7280;margin-top:4px;'>No files yet. Use the ➕ File button above.</div>",
-                    unsafe_allow_html=True,
-                )
-
-            # inline add-file form if this card is active
-            if st.session_state.get("show_add_file_for") == project["id"]:
-                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-                st.markdown("**Add new file**")
-                with st.form(f"add_file_form_{project['id']}"):
-                    fc1, fc2 = st.columns([3, 2])
-                    with fc1:
-                        filename = st.text_input(
-                            "File name",
-                            key=f"filename_{project['id']}",
-                            placeholder="main.py / index.js ...",
-                        )
-                    with fc2:
-                        language = st.selectbox(
-                            "Language",
-                            ["javascript", "python", "cpp", "java"],
-                            key=f"lang_{project['id']}",
-                        )
-                    submit_file = st.form_submit_button("Create file")
-                    if submit_file:
-                        if not filename.strip():
-                            st.warning("Please enter a file name.")
-                        else:
-                            create_project_file(
-                                project["id"], filename.strip(), language
+                
+                with col2:
+                    # Project Actions with Compact Buttons
+                    action_col1, action_col2 = st.columns(2)
+                    with action_col1:
+                        if st.button("➕", key=f"add_{project['id']}", help="Add file", use_container_width=True):
+                            st.session_state["show_add_file_for"] = project["id"]
+                    with action_col2:
+                        if st.button("🗑", key=f"delete_{project['id']}", help="Delete project", use_container_width=True):
+                            if st.session_state.get(f"confirm_delete_{project['id']}"):
+                                delete_project(project["id"])
+                                st.success(f"Project {project['name']} deleted!")
+                                st.rerun()
+                            else:
+                                st.session_state[f"confirm_delete_{project['id']}"] = True
+                                st.warning(f"Click again to confirm deletion of {project['name']}")
+                
+                # Files List
+                if files:
+                    for file in files:
+                        editor_url = f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}?username={username}"
+                        col1, col2, col3 = st.columns([3, 1, 1])
+                        with col1:
+                            st.markdown(
+                                f"""
+                                <div class="file-left">
+                                    <span>📄</span>
+                                    <span class="file-name">{file['filename']}</span>
+                                    <span class="file-lang">{file['language'].upper()}</span>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
                             )
-                            st.success(f"File **{filename}** created.")
-                            st.session_state["show_add_file_for"] = None
-                            st.rerun()
+                        with col2:
+                            st.markdown(
+                                f'<a class="file-open-btn" href="{editor_url}" target="_blank">Open</a>',
+                                unsafe_allow_html=True,
+                            )
+                        with col3:
+                            if st.button("🗑", key=f"delete_file_{file['id']}", help="Delete file", use_container_width=True):
+                                delete_project_file(file['id'])
+                                st.success(f"File {file['filename']} deleted!")
+                                st.rerun()
+                else:
+                    st.markdown(
+                        "<div style='text-align: center; color: #6b7280; padding: 20px;'>No files yet. Add your first file using the ➕ button above.</div>",
+                        unsafe_allow_html=True,
+                    )
+                
+                # Add File Form
+                if st.session_state.get("show_add_file_for") == project["id"]:
+                    st.markdown("---")
+                    with st.form(f"add_file_form_{project['id']}", clear_on_submit=True):
+                        st.markdown("#### Add New File")
+                        fcol1, fcol2, fcol3 = st.columns([2, 1, 1])
+                        with fcol1:
+                            filename = st.text_input(
+                                "File name",
+                                key=f"filename_{project['id']}",
+                                placeholder="main.py / index.js ..."
+                            )
+                        with fcol2:
+                            language = st.selectbox(
+                                "Language",
+                                ["python", "javascript", "java", "cpp", "html"],
+                                key=f"lang_{project['id']}"
+                            )
+                        with fcol3:
+                            submit_file = st.form_submit_button(
+                                "Create File",
+                                use_container_width=True
+                            )
+                        
+                        if submit_file:
+                            if not filename.strip():
+                                st.warning("Please enter a file name.")
+                            else:
+                                create_project_file(project["id"], filename.strip(), language)
+                                st.success(f"File *{filename}* created successfully!")
+                                st.session_state["show_add_file_for"] = None
+                                st.rerun()
+                
+                st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    # more breathing space
-    st.markdown("<div style='height:22px;'></div>", unsafe_allow_html=True)
-
-    # ================= ACTIVITY + RIGHT BOXES =================
-    st.markdown("### 📊 Activity & Insights")
-
-    left, right = st.columns([2, 1])
-
-    with left:
-        data = pd.DataFrame(
-            {
-                "Month": ["May", "Jun", "Jul", "Aug", "Sep", "Oct"],
-                "Projects": [3, 4, 2, 5, 4, 6],
-            }
-        )
-        fig = px.line(
-            data,
-            x="Month",
-            y="Projects",
-            markers=True,
-        )
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#cbd5e1"),
-        )
-        fig.update_xaxes(gridcolor="#334155")
-        fig.update_yaxes(gridcolor="#334155")
-        st.plotly_chart(fig, use_container_width=True)
-
-    # helper for quick rooms
-    def quick_room_link(action_slug: str) -> str:
-        room_id = uuid.uuid4().hex
-        return f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}&from={action_slug}"
-
-    with right:
-        # Quick AI Actions in a side card
-        explain_url = quick_room_link("explain")
-        debug_url = quick_room_link("debug")
-        docs_url = quick_room_link("docs")
-        optimize_url = quick_room_link("optimize")
-
-        ai_html = f"""
-        <div class="collab-box">
-            <h3 style="margin-top:0;">⚡ Quick AI Actions</h3>
-            <div class="ai-quick-grid">
-                <a href="{explain_url}" target="_blank" style="text-decoration:none;">
-                    <button class="ai-quick-btn">🧠 Explain Code</button>
-                </a>
-                <a href="{debug_url}" target="_blank" style="text-decoration:none;">
-                    <button class="ai-quick-btn">🐞 Debug Code</button>
-                </a>
-                <a href="{docs_url}" target="_blank" style="text-decoration:none;">
-                    <button class="ai-quick-btn">📝 Generate Docs</button>
-                </a>
-                <a href="{optimize_url}" target="_blank" style="text-decoration:none;">
-                    <button class="ai-quick-btn">🚀 Optimize Code</button>
-                </a>
+    # Coding Tips Section with Refresh Button
+    tips_html = f"""
+    <div class="tips-section">
+        <div class="tips-header">
+            <h3 class="tips-title">💡 Pro Coding Tips</h3>
+            <button class="refresh-tips-btn" onclick="refreshTips()">
+                🔄 
+            </button>
+        </div>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <div class="tip-card-title">{st.session_state.coding_tips[0]['title']}</div>
+                <div class="tip-card-desc">{st.session_state.coding_tips[0]['desc']}</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-card-title">{st.session_state.coding_tips[1]['title']}</div>
+                <div class="tip-card-desc">{st.session_state.coding_tips[1]['desc']}</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-card-title">{st.session_state.coding_tips[2]['title']}</div>
+                <div class="tip-card-desc">{st.session_state.coding_tips[2]['desc']}</div>
+            </div>
+            <div class="tip-card">
+                <div class="tip-card-title">{st.session_state.coding_tips[3]['title']}</div>
+                <div class="tip-card-desc">{st.session_state.coding_tips[3]['desc']}</div>
             </div>
         </div>
+    </div>
+    """
+    st.markdown(tips_html, unsafe_allow_html=True)
+
+    # JavaScript for refresh tips
+    components.html(
         """
-        st.markdown(ai_html, unsafe_allow_html=True)
-
-        # Quick stats below it
-        st.markdown(
-            """
-        <div class="collab-box">
-            <h3 style="margin-top:0;">📈 Quick Stats</h3>
-            <div style="font-size:13px;color:#cbd5e1;margin-top:6px;">
-                Sessions this week: <b>4</b><br/>
-                Avg. session length: <b>32 min</b><br/>
-                Most used language: <b>Python</b>
-            </div>
-        </div>
+        <script>
+        function refreshTips() {
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: {refreshTips: true}
+            }, '*');
+        }
+        </script>
         """,
-            unsafe_allow_html=True,
-        )
+        height=0
+    )
 
-    # ================= FLOATING CHAT BUTTON =================
+    # Handle refresh tips
+    if st.session_state.get('refreshTips'):
+        st.session_state.coding_tips = random.sample(CODING_TIPS, 4)
+        st.session_state.refreshTips = False
+        st.rerun()
+
+    # Fixed Floating Chat Button (always visible)
     floating_chat = """
     <style>
     #ai_chat_btn {
-        position: fixed;
-        bottom: 25px;
-        right: 25px;
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-        color: white;
-        border: none;
-        font-size: 32px;
-        cursor: pointer;
-        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
-        transition: all 0.3s ease;
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        position: fixed !important;
+        bottom: 25px !important;
+        right: 25px !important;
+        width: 65px !important;
+        height: 65px !important;
+        border-radius: 50% !important;
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+        color: white !important;
+        border: none !important;
+        font-size: 30px !important;
+        cursor: pointer !important;
+        box-shadow: 0 6px 22px rgba(15,23,42,0.85) !important;
+        transition: 0.25s !important;
+        z-index: 999999 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     #ai_chat_btn:hover {
-        transform: scale(1.15) rotate(5deg);
-        box-shadow: 0 12px 35px rgba(139, 92, 246, 0.6);
+        transform: scale(1.12) !important;
+        box-shadow: 0 10px 30px rgba(15,23,42,0.95) !important;
     }
 
     #ai_chat_box {
-        position: fixed;
-        bottom: 100px;
-        right: 25px;
-        width: 380px;
-        height: 500px;
-        background: #1e293b;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-        overflow: hidden;
-        z-index: 10000;
-        display: none;
-        transform: translateY(20px) scale(0.95);
-        opacity: 0;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 1px solid #334155;
+        position: fixed !important;
+        bottom: 10px !important;
+        right: 25px !important;
+        width: 380px !important;
+        height: 460px !important;
+        background: #020617 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.65) !important;
+        overflow: hidden !important;
+        z-index: 999999 !important;
+        display: none !important;
+        transform: translateY(40px) !important;
+        opacity: 0 !important;
+        transition: all .35s ease !important;
+        border: 1px solid #334155 !important;
     }
     #ai_chat_box.open {
-        display: block;
-        transform: translateY(0) scale(1);
-        opacity: 1;
+        display: block !important;
+        transform: translateY(0px) !important;
+        opacity: 1 !important;
     }
 
+    [data-testid="stSidebar"] { overflow: hidden !important; }
+
     #ai_chat_header {
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-        color: white;
-        padding: 15px 20px;
-        font-size: 18px;
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
+        color: white !important;
+        padding: 10px 14px !important;
+        font-size: 18px !important;
+        font-weight: 600 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 50px !important;
+        z-index: 1000000000 !important;
     }
     #ai_chat_close {
-        cursor: pointer;
-        font-size: 20px;
-        font-weight: bold;
-        transition: 0.2s ease;
+        cursor: pointer !important;
+        font-size: 22px !important;
+        font-weight: 900 !important;
     }
     #ai_chat_close:hover {
-        transform: scale(1.2);
-        color: #ffe5e5;
+        color: #ffe5e5 !important;
     }
 
     #ai_chat_iframe {
-        border: none;
-        background: #1e293b;
+        margin-top: 60px !important;
     }
     </style>
 
@@ -768,13 +991,13 @@ def dashboard():
 
     <div id="ai_chat_box">
         <div id="ai_chat_header">
-            CodeVerse AI Assistant
-            <span id="ai_chat_close">✕</span>
+            CodeVerse AI
+            <span id="ai_chat_close">✖</span>
         </div>
         <iframe id="ai_chat_iframe" src="/?chat=1"
             width="100%"
-            height="460px"
-            style="border:none;"></iframe>
+            height="410px"
+            style="border:none;background:#020617;"></iframe>
     </div>
 
     <script>
@@ -788,10 +1011,14 @@ def dashboard():
     closeBtn.onclick = () => {
         box.classList.remove("open");
     };
-    
-    document.addEventListener('click', (e) => {
-        if (!box.contains(e.target) && e.target !== btn) {
-            box.classList.remove('open');
+
+    // Make sure chat button stays fixed during scroll
+    window.addEventListener('scroll', function() {
+        const chatBtn = document.getElementById('ai_chat_btn');
+        if (chatBtn) {
+            chatBtn.style.position = 'fixed';
+            chatBtn.style.bottom = '25px';
+            chatBtn.style.right = '25px';
         }
     });
     </script>
@@ -805,8 +1032,9 @@ def dashboard():
         """,
         height=0,
         width=0,
+        scrolling=False,
     )
 
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     dashboard()
