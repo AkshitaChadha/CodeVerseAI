@@ -1,10 +1,11 @@
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import os
 
 def welcome_mail(user_email, username):
-    sender_email = "team.codeverseai@gmail.com"
-    app_password = "fplrvoodbrycrous"
+    sender_email = os.getenv("SENDER_EMAIL")
+    app_password =os.getenv("APP_PASSWORD")
 
     subject = "Welcome to CodeVerse AI 🚀"
     text_content = f"Hi {username}, welcome to CodeVerse AI! We're thrilled to have you with us."
