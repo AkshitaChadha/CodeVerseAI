@@ -462,18 +462,18 @@ def clear_password_reset(email):
     conn.close()
     
 def get_recent_files(limit=10):
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT id, filename, updated_at 
-            FROM files 
-            ORDER BY updated_at DESC 
-            LIMIT ?
-        """, (limit,))
-        rows = cursor.fetchall()
-        conn.close()
-        return rows
-    except Exception as e:
-        print("DB Error:", e)
-        return []
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT pf.room_id, pf.filename, pf.updated_at, p.name AS project_name
+        FROM project_files pf
+        JOIN projects p ON pf.project_id = p.id
+        ORDER BY pf.updated_at DESC
+        LIMIT %s
+        """,
+        (limit,)
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
