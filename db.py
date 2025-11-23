@@ -461,19 +461,34 @@ def clear_password_reset(email):
     conn.commit()
     conn.close()
     
-def get_recent_files(limit=10):
+def get_recent_files(user_id=None, limit=10):
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT pf.room_id, pf.filename, pf.updated_at, p.name AS project_name
-        FROM project_files pf
-        JOIN projects p ON pf.project_id = p.id
-        ORDER BY pf.updated_at DESC
-        LIMIT %s
-        """,
-        (limit,)
-    )
+
+    if user_id is not None:
+        cur.execute(
+            """
+            SELECT pf.room_id, pf.filename, pf.updated_at, p.name AS project_name
+            FROM project_files pf
+            JOIN projects p ON pf.project_id = p.id
+            WHERE p.user_id = %s
+            ORDER BY pf.updated_at DESC
+            LIMIT %s
+            """,
+            (user_id, limit)
+        )
+    else:
+        cur.execute(
+            """
+            SELECT pf.room_id, pf.filename, pf.updated_at, p.name AS project_name
+            FROM project_files pf
+            JOIN projects p ON pf.project_id = p.id
+            ORDER BY pf.updated_at DESC
+            LIMIT %s
+            """,
+            (limit,)
+        )
+
     rows = cur.fetchall()
     conn.close()
     return rows
