@@ -460,3 +460,20 @@ def clear_password_reset(email):
     cur.execute("DELETE FROM password_reset WHERE email = %s", (email,))
     conn.commit()
     conn.close()
+    
+def get_recent_files(limit=10):
+    try:
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, filename, updated_at 
+            FROM files 
+            ORDER BY updated_at DESC 
+            LIMIT ?
+        """, (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        return rows
+    except Exception as e:
+        print("DB Error:", e)
+        return []
