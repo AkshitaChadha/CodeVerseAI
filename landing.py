@@ -77,7 +77,7 @@ def inject_custom_css():
             -webkit-background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             margin-bottom: 2px !important;
-            line-height: 1;
+            line-height: 1.5;
         }
         
         .brand-subtitle {
@@ -98,6 +98,7 @@ def inject_custom_css():
             font-size: 0.95rem; 
             transition: 0.25s;
             font-weight: 500;
+            cursor: pointer;
         }
         .nav-link:hover { color: var(--accent-cyan) !important; }
         
@@ -481,7 +482,11 @@ def inject_custom_css():
         }
         
         .footer-links li { margin-bottom: 0.8rem; }
-        .footer-links a { color: var(--text-secondary); transition: 0.3s; }
+        .footer-links a { 
+            color: var(--text-secondary); 
+            transition: 0.3s; 
+            cursor: pointer;
+        }
         .footer-links a:hover { color: var(--accent-cyan); }
         
         .footer-bottom {
@@ -497,165 +502,179 @@ def inject_custom_css():
 
 # --- 2. Landing Page ---
 def app_main():
-    st.set_page_config(page_title="CodeVerse AI", layout="wide", initial_sidebar_state="collapsed")
+    st.set_page_config(page_title="CodeVerse AI", page_icon="🤖", layout="wide", initial_sidebar_state="collapsed")
     inject_custom_css()
-        
+    
+    # Initialize session state for navigation
+    if "current_section" not in st.session_state:
+        st.session_state.current_section = "hero"
+    
+    # Handle navigation clicks
+    query_params = st.query_params
+    if "section" in query_params:
+        st.session_state.current_section = query_params["section"]
+    
     # Navbar Section
-    st.markdown("""
+    st.markdown(f"""
         <div class="navbar">
             <div class="navbar-brand">
                 <div class="brand-main">CodeVerse AI</div>
                 <div class="brand-subtitle">Collaborative Code Editor</div>
             </div>
             <div class="navbar-right">
-                <a href="#" class="nav-link">About</a>
-                <a href="#" class="nav-link">Features</a>
-                <a href="#" class="nav-link">Contact</a>
+                <a href="?section=about" class="nav-link">About</a>
+                <a href="?section=features" class="nav-link">Features</a>
+                <a href="?section=testimonials" class="nav-link">Testimonials</a>
+                <a href="?section=contact" class="nav-link">Contact</a>
                 <a href="?login" class="nav-btn-secondary">Login</a>
                 <a href="?signup" class="nav-btn-primary">Get Started</a>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # Hero Section
-    st.markdown("""
-        <div class="hero">
-            <div class="hero-left">
-                <h2>Collaborate Smarter <br>Code Better <br>That’s CodeVerse AI
-</h2>
-                <p>Write, optimize, and debug together — with AI intelligence that keeps everyone aligned. The new era of collaboration has arrived.</p>
-                <a href="?signup" class="btn-primary">Start Coding</a>
-            </div>
-            <div class="hero-right">
-                <div class="code-visual floating">
-                    <div class="code-header">
-                        <div class="code-dot dot-red"></div>
-                        <div class="code-dot dot-yellow"></div>
-                        <div class="code-dot dot-green"></div>
-                    </div>
-                    <div class="code-content">
-                        <div class="code-line"><span class="code-keyword">function</span> <span class="code-function">quickSort</span>(arr) {</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">if</span> (arr.length <= 1) <span class="code-keyword">return</span> arr;</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> pivot = arr[0];</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> left = [];</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> right = [];</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-comment">// AI suggested optimization</span></div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = 1; i < arr.length; i++) {</div>
-                        <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;arr[i] < pivot ? left.push(arr[i]) : right.push(arr[i]);</div>
-                        <div class="code-line">&nbsp;&nbsp;}</div>
-                        <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">return</span> [...quickSort(left), pivot, ...quickSort(right)];</div>
-                        <div class="code-line">}</div>
+    # Show appropriate section based on navigation
+    if st.session_state.current_section == "hero" or st.session_state.current_section not in ["about", "features", "testimonials", "contact"]:
+        # Hero Section
+        st.markdown("""
+            <div class="hero">
+                <div class="hero-left">
+                    <h2>Collaborate Smarter <br>Code Better <br>That's CodeVerse AI</h2>
+                    <p>Write, optimize, and debug together — with AI intelligence that keeps everyone aligned. The new era of collaboration has arrived.</p>
+                    <a href="?signup" class="btn-primary">Start Coding</a>
+                </div>
+                <div class="hero-right">
+                    <div class="code-visual floating">
+                        <div class="code-header">
+                            <div class="code-dot dot-red"></div>
+                            <div class="code-dot dot-yellow"></div>
+                            <div class="code-dot dot-green"></div>
+                        </div>
+                        <div class="code-content">
+                            <div class="code-line"><span class="code-keyword">function</span> <span class="code-function">quickSort</span>(arr) {{</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">if</span> (arr.length <= 1) <span class="code-keyword">return</span> arr;</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> pivot = arr[0];</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> left = [];</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">const</span> right = [];</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-comment">// AI suggested optimization</span></div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = 1; i < arr.length; i++) {{</div>
+                            <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;arr[i] < pivot ? left.push(arr[i]) : right.push(arr[i]);</div>
+                            <div class="code-line">&nbsp;&nbsp;}}</div>
+                            <div class="code-line">&nbsp;&nbsp;<span class="code-keyword">return</span> [...quickSort(left), pivot, ...quickSort(right)];</div>
+                            <div class="code-line">}}</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    # Stats Section
-    st.markdown("""
-        <div class="stats-section">
-            <div class="stat-item">
-                <div class="stat-number">68%</div>
-                <div class="stat-label">Faster Coding</div>
+        # Stats Section
+        st.markdown("""
+            <div class="stats-section">
+                <div class="stat-item">
+                    <div class="stat-number">68%</div>
+                    <div class="stat-label">Faster Coding</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">60%</div>
+                    <div class="stat-label">Team Boost</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">AI Availability</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">87%</div>
+                    <div class="stat-label">Less Bugs</div>
+                </div>
             </div>
-            <div class="stat-item">
-                <div class="stat-number">60%</div>
-                <div class="stat-label">Team Boost</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">24/7</div>
-                <div class="stat-label">AI Availability</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">87%</div>
-                <div class="stat-label">Less Bugs</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     # About Section
-    st.markdown("""
-    <div class="simple-about">
-        <div class="about-container">
-            <div class="about-content">
-                <h3>Why CodeVerse AI Stands Out</h3>
-                <p class="about-desc">
-                    We're not just another collaborative editor — we're your AI-powered coding teammate. CodeVerse keeps everyone in sync, understands your project context, adapts to your workflow, and helps your team solve problems faster. From classroom assignments to real-world software builds, every developer levels up — together.
-                </p>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-number">10x</div>
-                        <div class="stat-label">Faster Development</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">92%</div>
-                        <div class="stat-label">Code Accuracy</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">24/7</div>
-                        <div class="stat-label">AI Assistance</div>
+    if st.session_state.current_section == "about" or st.session_state.current_section == "hero":
+        st.markdown("""
+        <div class="simple-about">
+            <div class="about-container">
+                <div class="about-content">
+                    <h3>Why CodeVerse AI Stands Out</h3>
+                    <p class="about-desc">
+                        We're not just another collaborative editor — we're your AI-powered coding teammate. CodeVerse keeps everyone in sync, understands your project context, adapts to your workflow, and helps your team solve problems faster. From classroom assignments to real-world software builds, every developer levels up — together.
+                    </p>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-number">10x</div>
+                            <div class="stat-label">Faster Development</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">92%</div>
+                            <div class="stat-label">Code Accuracy</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-number">24/7</div>
+                            <div class="stat-label">AI Assistance</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     # Features Section
-    st.markdown("""
-        <div class="feature-section">
-            <div class="feature">
-                <div class="feature-icon-main">⚡</div>
-                <h4>AI-Powered Coding</h4>
-                <p>Get smart suggestions, automatic debugging, and code explanations powered by advanced AI models.</p>
+    if st.session_state.current_section == "features" or st.session_state.current_section == "hero":
+        st.markdown("""
+            <div class="feature-section">
+                <div class="feature">
+                    <div class="feature-icon-main">⚡</div>
+                    <h4>AI-Powered Coding</h4>
+                    <p>Get smart suggestions, automatic debugging, and code explanations powered by advanced AI models.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon-main">🌍</div>
+                    <h4>Team Collaboration</h4>
+                    <p>Work with your team in real-time, share projects, and review code seamlessly.</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon-main">🔒</div>
+                    <h4>Secure & Reliable</h4>
+                    <p>Built with enterprise-grade encryption and robust cloud infrastructure.</p>
+                </div>
             </div>
-            <div class="feature">
-                <div class="feature-icon-main">🌍</div>
-                <h4>Team Collaboration</h4>
-                <p>Work with your team in real-time, share projects, and review code seamlessly.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon-main">🔒</div>
-                <h4>Secure & Reliable</h4>
-                <p>Built with enterprise-grade encryption and robust cloud infrastructure.</p>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # Testimonials Section
-    st.markdown("""
-        <div class="testimonials-section">
-            <h3>What Developers Say</h3>
-            <div class="testimonials-container">
-                <div class="testimonial">
-                    <div class="testimonial-text">
-                        "CodeVerse AI has completely transformed how I approach coding. The AI suggestions are incredibly accurate and have cut my development time in half."
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">SJ</div>
-                        <div class="author-info">
-                            <h5>Sarah Johnson</h5>
-                            <p>Senior Full-Stack Developer</p>
+    if st.session_state.current_section == "testimonials" or st.session_state.current_section == "hero":
+        st.markdown("""
+            <div class="testimonials-section">
+                <h3>What Developers Say</h3>
+                <div class="testimonials-container">
+                    <div class="testimonial">
+                        <div class="testimonial-text">
+                            "CodeVerse AI has completely transformed how I approach coding. The AI suggestions are incredibly accurate and have cut my development time in half."
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">SJ</div>
+                            <div class="author-info">
+                                <h5>Sarah Johnson</h5>
+                                <p>Senior Full-Stack Developer</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="testimonial">
-                    <div class="testimonial-text">
-                        "As a coding bootcamp instructor, I recommend CodeVerse AI to all my students. It's like having a personal tutor available 24/7."
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="author-avatar">MR</div>
-                        <div class="author-info">
-                            <h5>Michael Rodriguez</h5>
-                            <p>Lead Instructor at DevAcademy</p>
+                    <div class="testimonial">
+                        <div class="testimonial-text">
+                            "As a coding bootcamp instructor, I recommend CodeVerse AI to all my students. It's like having a personal tutor available 24/7."
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">MR</div>
+                            <div class="author-info">
+                                <h5>Michael Rodriguez</h5>
+                                <p>Lead Instructor at DevAcademy</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
-    # CTA Section
+    # CTA Section - Always show
     st.markdown("""
         <div class="cta-section">
             <div class="cta-content">
@@ -691,35 +710,25 @@ def app_main():
                 <div class="footer-column">
                     <h4>Product</h4>
                     <ul class="footer-links">
-                        <li><a href="#">Features</a></li>
-                        <li><a href="#">Pricing</a></li>
-                        <li><a href="#">Documentation</a></li>
+                        <li><a href="?section=features">Features</a></li>
+                        <li><a href="?section=contact">Contact</a></li>
                     </ul>
                 </div>
                 <div class="footer-column">
                     <h4>Company</h4>
                     <ul class="footer-links">
-                        <li><a href="#">About</a></li>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">Careers</a></li>
-                    </ul>
-                </div>
-                <div class="footer-column">
-                    <h4>Legal</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="?section=about">About</a></li>
+                        <li><a href="?section=testimonials">Testimonials</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2023 CodeVerse AI. All rights reserved.</p>
+                <p>&copy; 2025 CodeVerse AI. All rights reserved.</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # Routing
-    query_params = st.query_params
+    # Handle auth routing
     if "login" in query_params:
         st.session_state["auth_mode"] = "login"
         st.rerun()
