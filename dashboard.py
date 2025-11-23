@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import uuid
 import random
+import urllib.parse  # for encoding filenames in URLs
 
 from db import (
     init_db,
@@ -17,6 +18,7 @@ from db import (
     get_current_streak,
     delete_project,
     delete_project_file,
+    get_recent_files,
 )
 
 # ---------- INIT ----------
@@ -24,59 +26,60 @@ load_dotenv()
 init_db()
 
 # Local editor frontend (port 5000 for local)
-EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
+EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "http://localhost:5000")
 
-# Add this after your imports, before the dashboard() function
+# Updated Coding Tips with better, shorter shortcuts & tricks
 CODING_TIPS = [
     {
-        "title": "Write Readable Code",
-        "desc": "Always write code as if the next person to maintain it is a violent psychopath who knows where you live."
+        "title": "🚀 VS Code Speedrun",
+        "desc": "Ctrl+P: file search • Ctrl+Shift+O: go to symbol • Alt+Click: multi-cursor • Ctrl+B: toggle sidebar"
     },
     {
-        "title": "Use Version Control",
-        "desc": "Commit early and often. Small, frequent commits make it easier to track changes and revert if needed."
+        "title": "🧠 Debug Like a Pro",
+        "desc": "Log with context (console.log({ user, state })) instead of random prints • In Python, use logging.debug/info/error."
     },
     {
-        "title": "Test Your Code",
-        "desc": "Write tests before you write the code (TDD). It helps clarify requirements and prevents bugs."
+        "title": "⚡ Git Lifesavers",
+        "desc": "git status -sb for clean view • git diff --staged before commit • git restore . to discard local changes."
     },
     {
-        "title": "Keep Functions Small",
-        "desc": "Functions should do one thing and do it well. If it's doing multiple things, split it up."
+        "title": "🎨 CSS Layout Tricks",
+        "desc": "Use flex + gap instead of margins • minmax() with grid • clamp() for font sizes • aspect-ratio for media."
     },
     {
-        "title": "Use Meaningful Names",
-        "desc": "Variable and function names should reveal intent. Avoid abbreviations and single-letter names."
+        "title": "🐍 Python One-Liners",
+        "desc": "any()/all() for checks • list comprehensions for filtering • enumerate(list, 1) for 1-based index."
     },
     {
-        "title": "Document Your Code",
-        "desc": "Write comments that explain why, not what. The code should be self-explanatory for the what."
+        "title": "🌐 Modern JS Essentials",
+        "desc": "?? for nullish, not falsy • ?. for safe deep access • Array.some()/every() instead of loops."
     },
     {
-        "title": "Refactor Regularly",
-        "desc": "Don't let technical debt accumulate. Refactor code as you work on it."
+        "title": "📱 Responsive Mindset",
+        "desc": "Start mobile-first • Use rem for fonts • Test in devtools • Respect prefers-reduced-motion."
     },
     {
-        "title": "Learn Debugging Tools",
-        "desc": "Master your IDE's debugging features. It will save you hours of debugging time."
+        "title": "🔒 Security First",
+        "desc": "Always validate on server • Use parameterized queries • Never commit secrets • Use HTTPS by default."
     },
     {
-        "title": "Code Review",
-        "desc": "Always have someone else review your code. Fresh eyes catch things you might miss."
+        "title": "🚦 Frontend Performance",
+        "desc": "Lazy-load heavy components • Debounce search inputs • Use SVG icons • Cache common data."
     },
     {
-        "title": "Stay Updated",
-        "desc": "Keep learning new technologies and best practices, but don't chase every new trend."
+        "title": "🧪 Testing Mindset",
+        "desc": "Test bug cases first • Cover edge values (0, 1, max) • Name tests like user stories."
     },
     {
-        "title": "Error Handling",
-        "desc": "Always handle errors gracefully. Don't let your application crash unexpectedly."
+        "title": "📊 Database Smart Moves",
+        "desc": "Index WHERE/JOIN columns • Avoid SELECT * • Use LIMIT for lists • Use EXPLAIN on slow queries."
     },
     {
-        "title": "Performance Matters",
-        "desc": "Write efficient code, but don't optimize prematurely. Focus on readability first."
-    }
+        "title": "🧩 Code Readability Wins",
+        "desc": "Small functions > giant ones • Intent-based names • Early returns to reduce nesting."
+    },
 ]
+
 
 def dashboard():
     # --------- PAGE CONFIG ----------
@@ -181,6 +184,7 @@ def dashboard():
     }
     projects = get_user_projects(user_id) or []
     current_streak = get_current_streak(user_id)
+    recent_files = get_recent_files(user_id, limit=5)
 
     total_projects = stats.get("total_projects", 0)
     total_lines = stats.get("total_lines", 0)
@@ -265,7 +269,7 @@ def dashboard():
         background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
         color: white;
         border-radius: 12px;
-        padding: 12px 20px;
+        padding: 10px 18px;
         border: none;
         font-weight: 600;
         transition: all 0.3s ease;
@@ -325,7 +329,7 @@ def dashboard():
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
     .project-title-left {
         display: flex;
@@ -346,23 +350,45 @@ def dashboard():
     }
     .project-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
         align-items: center;
+        justify-content: flex-end;
     }
 
-    /* Compact Delete Buttons */
+    /* Delete Buttons */
+    .delete-btn {
+        background: transparent !important;
+        border: 1px solid #ef4444 !important;
+        border-radius: 8px !important;
+        padding: 6px 12px !important;
+        color: #ef4444 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        font-size: 12px !important;
+        min-height: unset !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px !important;
+    }
+    .delete-btn:hover {
+        background: #ef4444 !important;
+        color: white !important;
+        transform: scale(1.05) !important;
+    }
+
     .compact-delete-btn {
         background: transparent !important;
         border: 1px solid #ef4444 !important;
         border-radius: 6px !important;
-        padding: 2px 2px !important;
+        padding: 2px 6px !important;
         color: #ef4444 !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         font-size: 10px !important;
         min-height: unset !important;
         height: 24px !important;
-        width: 5px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -377,14 +403,13 @@ def dashboard():
         background: transparent !important;
         border: 1px solid #10b981 !important;
         border-radius: 6px !important;
-        padding: 2px 2px !important;
+        padding: 2px 6px !important;
         color: #10b981 !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         font-size: 10px !important;
         min-height: unset !important;
         height: 24px !important;
-        width: 5px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -395,42 +420,52 @@ def dashboard():
         transform: scale(1.1) !important;
     }
 
-    /* Enhanced File Rows */
-    .file-row {
-        font-size: 14px;
-        padding: 12px 0;
-        border-top: 1px solid rgba(31,41,55,0.75);
+    /* Enhanced File Rows (Projects) */
+    .project-files-wrapper {
+        margin-top: 6px;
+        border-top: 1px solid rgba(31,41,55,0.8);
+        padding-top: 4px;
+    }
+    .project-file-row {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        padding: 8px 4px;
+        border-radius: 8px;
         transition: all 0.2s ease;
     }
-    .file-row:hover {
-        background: rgba(30, 41, 59, 0.3);
-        border-radius: 8px;
-        padding: 12px;
-        margin: 0 -8px;
+    .project-file-row:hover {
+        background: rgba(30, 41, 59, 0.5);
+        transform: translateY(-1px);
     }
     .file-left {
         display: flex;
         align-items: center;
         gap: 10px;
+        flex: 1;
     }
     .file-name {
         color: #e5e7eb;
         font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .file-lang {
         color: #9ca3af;
         font-size: 11px;
-        background: rgba(30, 41, 59, 0.5);
+        background: rgba(30, 41, 59, 0.7);
         padding: 2px 8px;
         border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
     }
     .file-actions {
         display: flex;
         gap: 8px;
         align-items: center;
+        margin-left: 10px;
     }
     .file-open-btn {
         font-size: 12px;
@@ -440,12 +475,14 @@ def dashboard():
         color: #e5e7eb;
         text-decoration: none;
         transition: all 0.2s ease;
+        text-decoration: none;
     }
     .file-open-btn:hover {
         background: #8b5cf6;
         border-color: #8b5cf6;
         color: #ffffff;
         transform: translateY(-1px);
+        text-decoration: none;
     }
 
     /* Enhanced AI Actions - Border around entire section */
@@ -454,18 +491,9 @@ def dashboard():
         border-radius: 20px;
         border: 2px solid #334155;
         padding: 25px;
-        margin: 20px 0;
+        margin: 40px 0;
         position: relative;
         overflow: hidden;
-    }
-    .ai-actions-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
     }
     .ai-actions-header {
         display: flex;
@@ -518,50 +546,35 @@ def dashboard():
         text-decoration: none !important;
     }
 
-    /* Remove underlines from all links in AI actions */
-    .ai-action-card, .ai-action-card:hover, .ai-action-card:visited {
-        text-decoration: none !important;
+    /* Recent Files Cards */
+    .activity-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 12px;
+        padding: 18px;
+        border: 1px solid #475569;
+        transition: all 0.3s ease;
+        margin-bottom: 12px;
+    }
+    .activity-card:hover {
+        transform: translateY(-2px);
+        border-color: #10b981;
     }
 
-    /* Coding Tips Section with Refresh Button */
+    /* Coding Tips Section */
     .tips-section {
         background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
         border-radius: 20px;
         border: 2px solid #334155;
-        padding: 24px;
-        margin: 20px 0;
+        padding: 25px;
+        margin: 30px 0;
         box-shadow: 0 8px 32px rgba(15,23,42,0.7);
         position: relative;
     }
-    .tips-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
     .tips-title {
-        font-size: 20px;
+        font-size: 30px;
         font-weight: 700;
         color: #f1f5f9;
-        margin: 0;
-    }
-    .refresh-tips-btn {
-        background: transparent;
-        border: 1px solid #8b5cf6;
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: #8b5cf6;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .refresh-tips-btn:hover {
-        background: #8b5cf6;
-        color: white;
-        transform: rotate(15deg);
+        margin-bottom: 20px;
     }
     .tips-grid {
         display: grid;
@@ -571,7 +584,7 @@ def dashboard():
     .tip-card {
         background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
         border-radius: 12px;
-        padding: 20px;
+        padding: 18px;
         border: 1px solid #475569;
         transition: all 0.3s ease;
     }
@@ -588,7 +601,7 @@ def dashboard():
     .tip-card-desc {
         font-size: 14px;
         color: #94a3b8;
-        line-height: 1.4;
+        line-height: 1.5;
     }
 
     /* Delete Confirmation */
@@ -606,6 +619,39 @@ def dashboard():
         bottom: 25px !important;
         right: 25px !important;
         z-index: 999999 !important;
+    }
+
+    /* No Activity Message */
+    .no-activity {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+    }
+    .no-activity-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    /* Project Files Section */
+    .project-files-section {
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+        border-radius: 20px;
+        border: 2px solid #334155;
+        padding: 25px;
+        margin: 30px 0;
+    }
+    .project-files-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+    .project-files-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0;
     }
     </style>
     """,
@@ -678,7 +724,7 @@ def dashboard():
             st.rerun()
 
     # --------- MAIN CONTENT ----------
-    
+
     # Welcome Section
     st.markdown(f"# 👋 Welcome, {username}!")
     st.markdown(
@@ -712,6 +758,7 @@ def dashboard():
     # Enhanced Quick AI Actions with Border and Improved Layout
     def quick_room_link(action_slug: str) -> str:
         room_id = uuid.uuid4().hex
+        # For ad-hoc rooms we don't have a filename yet, so no filename param here
         return f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}&from={action_slug}"
 
     ai_actions_html = f"""
@@ -742,30 +789,71 @@ def dashboard():
     """
     st.markdown(ai_actions_html, unsafe_allow_html=True)
 
-    # Enhanced Projects Section
-    st.markdown("### 📁 Your Projects")
-    
+    # --------- RECENT FILES SECTION (compact horizontal style) ----------
+    st.markdown("<div class='tips-title'>🚀 Recent Files</div>", unsafe_allow_html=True,)
+    if recent_files:
+        for file in recent_files:
+            filename = file["filename"]
+            encoded_filename = urllib.parse.quote(filename)
+            editor_url = (
+                f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}"
+                f"?username={username}&filename={encoded_filename}"
+            )
+
+            st.markdown(
+                f"""
+                <div class="activity-card" style="padding:14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; font-weight:600; font-size:15px; color:#e2e8f0;">
+                            📄 {filename}
+                        </div>
+                        <div style="font-size:13px; color:#94a3b8; flex:1; text-align:center;">
+                            {file.get('project_name', 'Unknown')} • {file.get('language', 'code').upper()}
+                        </div>
+                        <a href="{editor_url}" target="_blank" 
+                           style="font-size:12px; padding:6px 14px; border-radius:20px; border:1px solid #4b5563; color:#e5e7eb; text-decoration:none; transition:0.2s;">
+                            Open
+                        </a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.markdown(
+            """
+            <div class="no-activity">
+                <div class="no-activity-icon">📁</div>
+                <div>No recent files</div>
+                <div style="font-size: 12px; margin-top: 8px;">Create your first file to get started!</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # --------- PROJECTS SECTION ----------
+    st.markdown("<div class='tips-title'>📂 Your Projects</div>",unsafe_allow_html=True,)
+
     # Create Project Form
     with st.form("create_project_form", clear_on_submit=True):
         col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
             new_project_name = st.text_input(
-                "Project name", 
+                "Project name",
                 placeholder="My awesome project",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
         with col2:
             project_language = st.selectbox(
                 "Language",
                 ["python", "javascript", "java", "cpp", "html"],
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
         with col3:
             create_project_btn = st.form_submit_button(
-                "🚀 Create Project",
-                use_container_width=True
+                "🚀 Create Project", use_container_width=True
             )
-        
+
         if create_project_btn:
             if not new_project_name.strip():
                 st.warning("Please enter a project name.")
@@ -779,81 +867,115 @@ def dashboard():
     if not projects:
         st.info("🌟 You don't have any projects yet. Create your first project above to get started!")
     else:
-        # Enhanced Projects Grid
+        # Enhanced Projects list with clean vertical sequence
         for project in projects:
             files = get_project_files(project["id"]) or []
 
-            st.markdown('<div class="project-card-big">', unsafe_allow_html=True)
-
-            header_col1, header_col2 = st.columns([4, 1])
-            with header_col1:
-                st.markdown(
-                    f"""
-                    <div class="project-header-row">
-                        <div class="project-title-left">
-                            <span>📁</span>
-                            <span class="name">{project['name']}</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"<div class='project-meta'>{len(files)} file(s)</div>",
-                    unsafe_allow_html=True,
-                )
-
-            with header_col2:
-                add_clicked = st.button(
-                    "➕ File",
-                    key=f"project_add_btn_{project['id']}",
-                    help="Add a new file to this project",
-                )
-                if add_clicked:
-                    st.session_state["show_add_file_for"] = project["id"]
-
-            # thin file rows
+            # Project header with name and action buttons
+            with st.container():
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    st.markdown(f"### 📁 {project['name']}")
+                    st.markdown(f"<div style='color: #94a3b8; font-size: 14px; margin-top: -10px; margin-bottom: 10px;'>{len(files)} file(s)</div>", 
+                               unsafe_allow_html=True)
+                
+                with col2:
+                    # Action buttons container
+                    btn_col1, btn_col2 = st.columns(2)
+                    with btn_col1:
+                        if st.button("➕ Add File", 
+                                    key=f"add_{project['id']}",
+                                    use_container_width=True,
+                                    help="Add a new file to this project"):
+                            st.session_state["show_add_file_for"] = project["id"]
+                            st.rerun()
+                    
+                    with btn_col2:
+                        if st.button("🗑", 
+                                    key=f"delete_{project['id']}",
+                                    use_container_width=True,
+                                    help="Delete this project"):
+                            if st.session_state.get(f"confirm_delete_{project['id']}"):
+                                if delete_project(project["id"]):
+                                    st.success(f"Project '{project['name']}' deleted successfully!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to delete project.")
+                            else:
+                                st.session_state[f"confirm_delete_{project['id']}"] = True
+                                st.warning(f"Click again to confirm deletion of '{project['name']}'")
+            
+            # Files list in vertical sequence
             if files:
+                st.markdown("<div style='margin-left: 20px;'>", unsafe_allow_html=True)
+                
                 for f in files:
                     file_lang = f.get("language", "code")
+                    filename = f["filename"]
+                    encoded_filename = urllib.parse.quote(filename)
                     editor_url = (
-                        f"{EDITOR_FRONTEND_URL}/editor/{f['room_id']}?username={username}"
+                        f"{EDITOR_FRONTEND_URL}/editor/{f['room_id']}"
+                        f"?username={username}&filename={encoded_filename}"
                     )
-                    st.markdown(
-                        f"""
-                        <div class="file-row-thin">
-                            📄 <strong>{f['filename']}</strong>
-                            <span class="lang">{file_lang.upper()}</span>
-                            <a class="file-open-pill" href="{editor_url}" target="_blank">Open</a>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-            else:
-                st.markdown(
-                    "<div style='font-size:11px;color:#6b7280;margin-top:4px;'>No files yet. Use the ➕ File button above.</div>",
-                    unsafe_allow_html=True,
-                )
+                    
+                    # File row with actions
+                    with st.container():
+                        file_col1, file_col2, file_col3 = st.columns([3, 1, 1])
+                        
+                        with file_col1:
+                            st.markdown(f"📄 {filename}")
+                            st.markdown(f"<div style='color: #94a3b8; font-size: 12px; margin-top: -8px;'>Language: {file_lang.upper()}</div>", 
+                                       unsafe_allow_html=True)
+                        
+                        with file_col2:
+                            st.markdown(
+                                f'<a href="{editor_url}" target="_blank" style="display: inline-block; width: 100%; text-align: center; padding: 6px 12px; border-radius: 6px; border: 1px solid #4b5563; color: #e5e7eb; text-decoration: none; transition: 0.2s; font-size: 12px;">Open</a>',
+                                unsafe_allow_html=True
+                            )
+                        
+                        with file_col3:
+                            if st.button("🗑", 
+                                        key=f"delfile_{f['id']}",
+                                        help=f"Delete {filename}",
+                                        use_container_width=True):
+                                if st.session_state.get(f"confirm_delfile_{f['id']}"):
+                                    if delete_project_file(f["id"]):
+                                        st.success(f"File '{filename}' deleted successfully!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to delete file.")
+                                else:
+                                    st.session_state[f"confirm_delfile_{f['id']}"] = True
+                                    st.warning(f"Click again to confirm deletion of '{filename}'")
+                    
+                    # Small spacer between files
+                    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
-            # inline add-file form if this card is active
+            # Add file form if this project is active
             if st.session_state.get("show_add_file_for") == project["id"]:
-                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-left: 20px; margin-top: 15px;'>", unsafe_allow_html=True)
                 st.markdown("*Add new file*")
                 with st.form(f"add_file_form_{project['id']}"):
-                    fc1, fc2 = st.columns([3, 2])
-                    with fc1:
+                    form_col1, form_col2, form_col3 = st.columns([3, 2, 1])
+                    with form_col1:
                         filename = st.text_input(
                             "File name",
                             key=f"filename_{project['id']}",
                             placeholder="main.py / index.js ...",
                         )
-                    with fc2:
+                    with form_col2:
                         language = st.selectbox(
                             "Language",
                             ["javascript", "python", "cpp", "java"],
                             key=f"lang_{project['id']}",
                         )
-                    submit_file = st.form_submit_button("Create file")
+                    with form_col3:
+                        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+                        submit_file = st.form_submit_button("Create", use_container_width=True)
+                    
                     if submit_file:
                         if not filename.strip():
                             st.warning("Please enter a file name.")
@@ -864,60 +986,47 @@ def dashboard():
                             st.success(f"File *{filename}* created.")
                             st.session_state["show_add_file_for"] = None
                             st.rerun()
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Divider between projects
+            st.markdown("---")
 
-            st.markdown("</div>", unsafe_allow_html=True)
+    # Coding Tips Section with working Refresh Button
 
-    # Coding Tips Section with Refresh Button
+    header_col1, header_col2 = st.columns([5, 1])
+    with header_col1:
+        st.markdown(
+            "<div class='tips-title'>💡 Pro Coding Tips & Shortcuts</div>",
+            unsafe_allow_html=True,
+        )
+    with header_col2:
+        if st.button("🔄 Refresh tips", key="refresh_tips_btn"):
+            st.session_state.coding_tips = random.sample(CODING_TIPS, 4)
+            st.rerun()
+
+    tips = st.session_state.coding_tips
     tips_html = f"""
-    <div class="tips-section">
-        <div class="tips-header">
-            <h3 class="tips-title">💡 Pro Coding Tips</h3>
-            <button class="refresh-tips-btn" onclick="refreshTips()">
-                🔄 
-            </button>
-        </div>
         <div class="tips-grid">
             <div class="tip-card">
-                <div class="tip-card-title">{st.session_state.coding_tips[0]['title']}</div>
-                <div class="tip-card-desc">{st.session_state.coding_tips[0]['desc']}</div>
+                <div class="tip-card-title">{tips[0]['title']}</div>
+                <div class="tip-card-desc">{tips[0]['desc']}</div>
             </div>
             <div class="tip-card">
-                <div class="tip-card-title">{st.session_state.coding_tips[1]['title']}</div>
-                <div class="tip-card-desc">{st.session_state.coding_tips[1]['desc']}</div>
+                <div class="tip-card-title">{tips[1]['title']}</div>
+                <div class="tip-card-desc">{tips[1]['desc']}</div>
             </div>
             <div class="tip-card">
-                <div class="tip-card-title">{st.session_state.coding_tips[2]['title']}</div>
-                <div class="tip-card-desc">{st.session_state.coding_tips[2]['desc']}</div>
+                <div class="tip-card-title">{tips[2]['title']}</div>
+                <div class="tip-card-desc">{tips[2]['desc']}</div>
             </div>
             <div class="tip-card">
-                <div class="tip-card-title">{st.session_state.coding_tips[3]['title']}</div>
-                <div class="tip-card-desc">{st.session_state.coding_tips[3]['desc']}</div>
+                <div class="tip-card-title">{tips[3]['title']}</div>
+                <div class="tip-card-desc">{tips[3]['desc']}</div>
             </div>
         </div>
-    </div>
     """
     st.markdown(tips_html, unsafe_allow_html=True)
-
-    # JavaScript for refresh tips
-    components.html(
-        """
-        <script>
-        function refreshTips() {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: {refreshTips: true}
-            }, '*');
-        }
-        </script>
-        """,
-        height=0
-    )
-
-    # Handle refresh tips
-    if st.session_state.get('refreshTips'):
-        st.session_state.coding_tips = random.sample(CODING_TIPS, 4)
-        st.session_state.refreshTips = False
-        st.rerun()
 
     # Fixed Floating Chat Button (always visible)
     floating_chat = """
@@ -1026,7 +1135,6 @@ def dashboard():
         box.classList.remove("open");
     };
 
-    // Make sure chat button stays fixed during scroll
     window.addEventListener('scroll', function() {
         const chatBtn = document.getElementById('ai_chat_btn');
         if (chatBtn) {
@@ -1050,5 +1158,5 @@ def dashboard():
     )
 
 
-if __name__ == "main":
+if __name__ == "_main_":
     dashboard()
