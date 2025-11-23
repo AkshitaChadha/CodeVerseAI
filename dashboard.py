@@ -1050,5 +1050,5 @@ def dashboard():
     )
 
 
-if _name_ == "main":
+if __name__ == "main":
     dashboard()
