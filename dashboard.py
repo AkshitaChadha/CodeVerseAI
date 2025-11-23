@@ -23,28 +23,60 @@ from db import (
 load_dotenv()
 init_db()
 
-# Editor frontend (local/remote)
-EDITOR_FRONTEND_URL = os.getenv(
-    "EDITOR_FRONTEND_URL",
-    "https://codeverseai-editor.vercel.app",
-)
+# Local editor frontend (port 5000 for local)
+EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
 
-# Coding tips and shortcuts data
+# Add this after your imports, before the dashboard() function
 CODING_TIPS = [
-    {"title": "🚀 Git Commit", "desc": "Use git commit -m \"descriptive message\" for better version control"},
-    {"title": "⚡ VS Code Shortcut", "desc": "Ctrl/Cmd + D selects the next occurrence of the current selection"},
-    {"title": "🐍 Python Tip", "desc": "Use list comprehensions for cleaner and faster list operations"},
-    {"title": "🔧 Debugging", "desc": "Use console.log() in JS or print() in Python for quick debugging"},
-    {"title": "📝 Code Formatting", "desc": "Use Prettier for JS/TS or Black for Python to maintain consistent code style"},
-    {"title": "🎯 Git Branch", "desc": "Create feature branches with git checkout -b feature/name for better workflow"},
-    {"title": "💡 VS Code Tip", "desc": "Ctrl/Cmd + Shift + P opens command palette for quick actions"},
-    {"title": "🔍 Quick Search", "desc": "Use Ctrl/Cmd + F to find and Ctrl/Cmd + H to replace in most editors"},
-    {"title": "📚 Documentation", "desc": "Always document your functions with clear docstrings or JSDoc comments"},
-    {"title": "🚀 Terminal Power", "desc": "Use cd - to switch to previous directory in terminal"},
-    {"title": "🐞 Debug Pro Tip", "desc": "Use breakpoints in browser dev tools or IDE for step-by-step debugging"},
-    {"title": "⚡ Performance", "desc": "Avoid nested loops when possible - time complexity matters!"}
+    {
+        "title": "Write Readable Code",
+        "desc": "Always write code as if the next person to maintain it is a violent psychopath who knows where you live."
+    },
+    {
+        "title": "Use Version Control",
+        "desc": "Commit early and often. Small, frequent commits make it easier to track changes and revert if needed."
+    },
+    {
+        "title": "Test Your Code",
+        "desc": "Write tests before you write the code (TDD). It helps clarify requirements and prevents bugs."
+    },
+    {
+        "title": "Keep Functions Small",
+        "desc": "Functions should do one thing and do it well. If it's doing multiple things, split it up."
+    },
+    {
+        "title": "Use Meaningful Names",
+        "desc": "Variable and function names should reveal intent. Avoid abbreviations and single-letter names."
+    },
+    {
+        "title": "Document Your Code",
+        "desc": "Write comments that explain why, not what. The code should be self-explanatory for the what."
+    },
+    {
+        "title": "Refactor Regularly",
+        "desc": "Don't let technical debt accumulate. Refactor code as you work on it."
+    },
+    {
+        "title": "Learn Debugging Tools",
+        "desc": "Master your IDE's debugging features. It will save you hours of debugging time."
+    },
+    {
+        "title": "Code Review",
+        "desc": "Always have someone else review your code. Fresh eyes catch things you might miss."
+    },
+    {
+        "title": "Stay Updated",
+        "desc": "Keep learning new technologies and best practices, but don't chase every new trend."
+    },
+    {
+        "title": "Error Handling",
+        "desc": "Always handle errors gracefully. Don't let your application crash unexpectedly."
+    },
+    {
+        "title": "Performance Matters",
+        "desc": "Write efficient code, but don't optimize prematurely. Focus on readability first."
+    }
 ]
-
 
 def dashboard():
     # --------- PAGE CONFIG ----------
@@ -739,7 +771,7 @@ def dashboard():
                 st.warning("Please enter a project name.")
             else:
                 create_project(user_id, new_project_name.strip())
-                st.success(f"Project *{new_project_name}* created successfully!")
+                st.success(f"Project *{new_project_name}* created.")
                 st.rerun()
 
     st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
@@ -750,108 +782,90 @@ def dashboard():
         # Enhanced Projects Grid
         for project in projects:
             files = get_project_files(project["id"]) or []
-            
-            with st.container():
-                st.markdown('<div class="project-card">', unsafe_allow_html=True)
-                
-                # Project Header
-                col1, col2 = st.columns([3, 1])
-                with col1:
+
+            st.markdown('<div class="project-card-big">', unsafe_allow_html=True)
+
+            header_col1, header_col2 = st.columns([4, 1])
+            with header_col1:
+                st.markdown(
+                    f"""
+                    <div class="project-header-row">
+                        <div class="project-title-left">
+                            <span>📁</span>
+                            <span class="name">{project['name']}</span>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<div class='project-meta'>{len(files)} file(s)</div>",
+                    unsafe_allow_html=True,
+                )
+
+            with header_col2:
+                add_clicked = st.button(
+                    "➕ File",
+                    key=f"project_add_btn_{project['id']}",
+                    help="Add a new file to this project",
+                )
+                if add_clicked:
+                    st.session_state["show_add_file_for"] = project["id"]
+
+            # thin file rows
+            if files:
+                for f in files:
+                    file_lang = f.get("language", "code")
+                    editor_url = (
+                        f"{EDITOR_FRONTEND_URL}/editor/{f['room_id']}?username={username}"
+                    )
                     st.markdown(
                         f"""
-                        <div class="project-card-header">
-                            <div class="project-title-left">
-                                <span>📁</span>
-                                <span class="name">{project['name']}</span>
-                                <span class="project-meta">{len(files)} files</span>
-                            </div>
+                        <div class="file-row-thin">
+                            📄 <strong>{f['filename']}</strong>
+                            <span class="lang">{file_lang.upper()}</span>
+                            <a class="file-open-pill" href="{editor_url}" target="_blank">Open</a>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
-                
-                with col2:
-                    # Project Actions with Compact Buttons
-                    action_col1, action_col2 = st.columns(2)
-                    with action_col1:
-                        if st.button("➕", key=f"add_{project['id']}", help="Add file", use_container_width=True):
-                            st.session_state["show_add_file_for"] = project["id"]
-                    with action_col2:
-                        if st.button("🗑", key=f"delete_{project['id']}", help="Delete project", use_container_width=True):
-                            if st.session_state.get(f"confirm_delete_{project['id']}"):
-                                delete_project(project["id"])
-                                st.success(f"Project {project['name']} deleted!")
-                                st.rerun()
-                            else:
-                                st.session_state[f"confirm_delete_{project['id']}"] = True
-                                st.warning(f"Click again to confirm deletion of {project['name']}")
-                
-                # Files List
-                if files:
-                    for file in files:
-                        editor_url = f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}?username={username}"
-                        col1, col2, col3 = st.columns([3, 1, 1])
-                        with col1:
-                            st.markdown(
-                                f"""
-                                <div class="file-left">
-                                    <span>📄</span>
-                                    <span class="file-name">{file['filename']}</span>
-                                    <span class="file-lang">{file['language'].upper()}</span>
-                                </div>
-                                """,
-                                unsafe_allow_html=True,
+            else:
+                st.markdown(
+                    "<div style='font-size:11px;color:#6b7280;margin-top:4px;'>No files yet. Use the ➕ File button above.</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # inline add-file form if this card is active
+            if st.session_state.get("show_add_file_for") == project["id"]:
+                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                st.markdown("*Add new file*")
+                with st.form(f"add_file_form_{project['id']}"):
+                    fc1, fc2 = st.columns([3, 2])
+                    with fc1:
+                        filename = st.text_input(
+                            "File name",
+                            key=f"filename_{project['id']}",
+                            placeholder="main.py / index.js ...",
+                        )
+                    with fc2:
+                        language = st.selectbox(
+                            "Language",
+                            ["javascript", "python", "cpp", "java"],
+                            key=f"lang_{project['id']}",
+                        )
+                    submit_file = st.form_submit_button("Create file")
+                    if submit_file:
+                        if not filename.strip():
+                            st.warning("Please enter a file name.")
+                        else:
+                            create_project_file(
+                                project["id"], filename.strip(), language
                             )
-                        with col2:
-                            st.markdown(
-                                f'<a class="file-open-btn" href="{editor_url}" target="_blank">Open</a>',
-                                unsafe_allow_html=True,
-                            )
-                        with col3:
-                            if st.button("🗑", key=f"delete_file_{file['id']}", help="Delete file", use_container_width=True):
-                                delete_project_file(file['id'])
-                                st.success(f"File {file['filename']} deleted!")
-                                st.rerun()
-                else:
-                    st.markdown(
-                        "<div style='text-align: center; color: #6b7280; padding: 20px;'>No files yet. Add your first file using the ➕ button above.</div>",
-                        unsafe_allow_html=True,
-                    )
-                
-                # Add File Form
-                if st.session_state.get("show_add_file_for") == project["id"]:
-                    st.markdown("---")
-                    with st.form(f"add_file_form_{project['id']}", clear_on_submit=True):
-                        st.markdown("#### Add New File")
-                        fcol1, fcol2, fcol3 = st.columns([2, 1, 1])
-                        with fcol1:
-                            filename = st.text_input(
-                                "File name",
-                                key=f"filename_{project['id']}",
-                                placeholder="main.py / index.js ..."
-                            )
-                        with fcol2:
-                            language = st.selectbox(
-                                "Language",
-                                ["python", "javascript", "java", "cpp", "html"],
-                                key=f"lang_{project['id']}"
-                            )
-                        with fcol3:
-                            submit_file = st.form_submit_button(
-                                "Create File",
-                                use_container_width=True
-                            )
-                        
-                        if submit_file:
-                            if not filename.strip():
-                                st.warning("Please enter a file name.")
-                            else:
-                                create_project_file(project["id"], filename.strip(), language)
-                                st.success(f"File *{filename}* created successfully!")
-                                st.session_state["show_add_file_for"] = None
-                                st.rerun()
-                
-                st.markdown('</div>', unsafe_allow_html=True)
+                            st.success(f"File *{filename}* created.")
+                            st.session_state["show_add_file_for"] = None
+                            st.rerun()
+
+            st.markdown("</div>", unsafe_allow_html=True)
 
     # Coding Tips Section with Refresh Button
     tips_html = f"""
@@ -1036,5 +1050,5 @@ def dashboard():
     )
 
 
-if __name__ == "_main_":
+if _name_ == "main":
     dashboard()
