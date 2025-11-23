@@ -7,23 +7,44 @@ import os
 import uuid
 import random
 import urllib.parse  # for encoding filenames in URLs
+import traceback
 
-from db import (
-    init_db,
-    get_dashboard_stats,
-    get_user_projects,
-    get_project_files,
-    create_project,
-    create_project_file,
-    get_current_streak,
-    delete_project,
-    delete_project_file,
-    get_recent_files,
-)
+try:
+    from db import (
+        init_db,
+        get_dashboard_stats,
+        get_user_projects,
+        get_project_files,
+        create_project,
+        create_project_file,
+        get_current_streak,
+        delete_project,
+        delete_project_file,
+        get_recent_files,
+    )
+    DB_AVAILABLE = True
+except ImportError as e:
+    st.error(f"Database module import error: {e}")
+    DB_AVAILABLE = False
+    # Create dummy functions to prevent further errors
+    def init_db(): pass
+    def get_dashboard_stats(user_id): return {"total_projects": 0, "total_lines": 0, "total_files": 0}
+    def get_user_projects(user_id): return []
+    def get_project_files(project_id): return []
+    def create_project(user_id, name): return True
+    def create_project_file(project_id, filename, language): return True
+    def get_current_streak(user_id): return 0
+    def delete_project(project_id): return True
+    def delete_project_file(file_id): return True
+    def get_recent_files(user_id, limit=5): return []
 
 # ---------- INIT ----------
 load_dotenv()
-init_db()
+
+try:
+    init_db()
+except Exception as e:
+    st.error(f"Database initialization error: {e}")
 
 # Local editor frontend (port 5000 for local)
 EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "http://localhost:5000")
@@ -95,7 +116,16 @@ def dashboard():
     username = user_info["username"]
 
     # --------- LOAD GROQ & CHAT MEMORY ----------
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    try:
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            st.warning("GROQ_API_KEY not found in environment variables")
+            client = None
+        else:
+            client = Groq(api_key=groq_api_key)
+    except Exception as e:
+        st.error(f"Groq client initialization error: {e}")
+        client = None
 
     if "chatbot_messages" not in st.session_state:
         st.session_state.chatbot_messages = [
@@ -137,30 +167,44 @@ def dashboard():
                 {"role": "user", "content": user_input}
             )
 
-            # Typing animation
-            typing_msg = st.chat_message("assistant")
-            typing_placeholder = typing_msg.empty()
-            typing_placeholder.write(" typing...")
+            if client:
+                # Typing animation
+                typing_msg = st.chat_message("assistant")
+                typing_placeholder = typing_msg.empty()
+                typing_placeholder.write(" typing...")
 
-            # Call Groq model
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful and friendly AI assistant.",
-                    }
-                ]
-                + st.session_state.chatbot_messages,
-            )
-            reply = response.choices[0].message.content
+                try:
+                    # Call Groq model
+                    response = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a helpful and friendly AI assistant.",
+                            }
+                        ]
+                        + st.session_state.chatbot_messages,
+                    )
+                    reply = response.choices[0].message.content
 
-            # Replace typing animation
-            typing_placeholder.empty()
-            st.chat_message("assistant").write(reply)
-            st.session_state.chatbot_messages.append(
-                {"role": "assistant", "content": reply}
-            )
+                    # Replace typing animation
+                    typing_placeholder.empty()
+                    st.chat_message("assistant").write(reply)
+                    st.session_state.chatbot_messages.append(
+                        {"role": "assistant", "content": reply}
+                    )
+                except Exception as e:
+                    typing_placeholder.empty()
+                    error_msg = f"Sorry, I encountered an error: {str(e)}"
+                    st.chat_message("assistant").write(error_msg)
+                    st.session_state.chatbot_messages.append(
+                        {"role": "assistant", "content": error_msg}
+                    )
+            else:
+                st.chat_message("assistant").write("Chat functionality is currently unavailable. Please check your API configuration.")
+                st.session_state.chatbot_messages.append(
+                    {"role": "assistant", "content": "Chat functionality is currently unavailable. Please check your API configuration."}
+                )
 
         # Clear chat
         if st.button(" Clear Conversation"):
@@ -176,15 +220,26 @@ def dashboard():
 
     # ================= NORMAL DASHBOARD =================
 
+    # Show database status warning
+    if not DB_AVAILABLE:
+        st.warning("⚠ Database functionality is limited. Some features may not work properly.")
+
     # --------- DATA FOR THIS USER ----------
-    stats = get_dashboard_stats(user_id) or {
-        "total_projects": 0,
-        "total_lines": 0,
-        "total_files": 0,
-    }
-    projects = get_user_projects(user_id) or []
-    current_streak = get_current_streak(user_id)
-    recent_files = get_recent_files(user_id, limit=5)
+    try:
+        stats = get_dashboard_stats(user_id) or {
+            "total_projects": 0,
+            "total_lines": 0,
+            "total_files": 0,
+        }
+        projects = get_user_projects(user_id) or []
+        current_streak = get_current_streak(user_id)
+        recent_files = get_recent_files(user_id, limit=5)
+    except Exception as e:
+        st.error(f"Error loading user data: {e}")
+        stats = {"total_projects": 0, "total_lines": 0, "total_files": 0}
+        projects = []
+        current_streak = 0
+        recent_files = []
 
     total_projects = stats.get("total_projects", 0)
     total_lines = stats.get("total_lines", 0)
@@ -858,9 +913,12 @@ def dashboard():
             if not new_project_name.strip():
                 st.warning("Please enter a project name.")
             else:
-                create_project(user_id, new_project_name.strip())
-                st.success(f"Project *{new_project_name}* created.")
-                st.rerun()
+                try:
+                    create_project(user_id, new_project_name.strip())
+                    st.success(f"Project *{new_project_name}* created.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error creating project: {e}")
 
     st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
 
@@ -869,7 +927,11 @@ def dashboard():
     else:
         # Enhanced Projects list with clean vertical sequence
         for project in projects:
-            files = get_project_files(project["id"]) or []
+            try:
+                files = get_project_files(project["id"]) or []
+            except Exception as e:
+                st.error(f"Error loading files for project {project['name']}: {e}")
+                files = []
 
             # Project header with name and action buttons
             with st.container():
@@ -897,11 +959,14 @@ def dashboard():
                                     use_container_width=True,
                                     help="Delete this project"):
                             if st.session_state.get(f"confirm_delete_{project['id']}"):
-                                if delete_project(project["id"]):
-                                    st.success(f"Project '{project['name']}' deleted successfully!")
-                                    st.rerun()
-                                else:
-                                    st.error("Failed to delete project.")
+                                try:
+                                    if delete_project(project["id"]):
+                                        st.success(f"Project '{project['name']}' deleted successfully!")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to delete project.")
+                                except Exception as e:
+                                    st.error(f"Error deleting project: {e}")
                             else:
                                 st.session_state[f"confirm_delete_{project['id']}"] = True
                                 st.warning(f"Click again to confirm deletion of '{project['name']}'")
@@ -940,11 +1005,14 @@ def dashboard():
                                         help=f"Delete {filename}",
                                         use_container_width=True):
                                 if st.session_state.get(f"confirm_delfile_{f['id']}"):
-                                    if delete_project_file(f["id"]):
-                                        st.success(f"File '{filename}' deleted successfully!")
-                                        st.rerun()
-                                    else:
-                                        st.error("Failed to delete file.")
+                                    try:
+                                        if delete_project_file(f["id"]):
+                                            st.success(f"File '{filename}' deleted successfully!")
+                                            st.rerun()
+                                        else:
+                                            st.error("Failed to delete file.")
+                                    except Exception as e:
+                                        st.error(f"Error deleting file: {e}")
                                 else:
                                     st.session_state[f"confirm_delfile_{f['id']}"] = True
                                     st.warning(f"Click again to confirm deletion of '{filename}'")
@@ -980,12 +1048,15 @@ def dashboard():
                         if not filename.strip():
                             st.warning("Please enter a file name.")
                         else:
-                            create_project_file(
-                                project["id"], filename.strip(), language
-                            )
-                            st.success(f"File *{filename}* created.")
-                            st.session_state["show_add_file_for"] = None
-                            st.rerun()
+                            try:
+                                create_project_file(
+                                    project["id"], filename.strip(), language
+                                )
+                                st.success(f"File *{filename}* created.")
+                                st.session_state["show_add_file_for"] = None
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error creating file: {e}")
                 
                 st.markdown("</div>", unsafe_allow_html=True)
             
