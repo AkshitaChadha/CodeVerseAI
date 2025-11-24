@@ -1200,9 +1200,14 @@ closeBtn.onclick = () => box.classList.remove("open");
 """
 
     components.html(
-    f"<div style='height:0;width:0;'>{floating_chat}</div>",
-    height=500,
-    width=0
+    f"""
+    <div style='height:0;width:0;'>
+    {floating_chat}
+    </div>
+    """,
+    height=0,
+    width=0,
+    scrolling=False,
 )
 if __name__ == "__main__":
     dashboard()
