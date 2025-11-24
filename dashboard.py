@@ -1199,15 +1199,21 @@ closeBtn.onclick = () => box.classList.remove("open");
 </script>
 """
 
+    import base64
+
+    encoded_chat = base64.b64encode(floating_chat.encode()).decode()
+
     components.html(
     f"""
     <script>
+    const decoded = atob("{encoded_chat}");
     const container = document.createElement('div');
-    container.innerHTML = `{floating_chat}`;
+    container.innerHTML = decoded;
     document.body.appendChild(container);
     </script>
     """,
-    height=500,
+    height=0,
+    width=0,
 )
 if __name__ == "__main__":
     dashboard()
