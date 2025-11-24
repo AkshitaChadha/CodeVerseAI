@@ -1207,7 +1207,7 @@ closeBtn.onclick = () => box.classList.remove("open");
     document.body.appendChild(container);
     </script>
     """,
-    height=0,
+    height=500,
 )
 if __name__ == "__main__":
     dashboard()
