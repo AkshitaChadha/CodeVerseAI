@@ -1101,119 +1101,59 @@ def dashboard():
     st.markdown(tips_html, unsafe_allow_html=True)
 
     # Fixed Floating Chat Button (always visible)
-    floating_chat = """
+    import streamlit.components.v1 as components
+
+    chat_html = f"""
 <style>
-/* Floating button */
-#ai_chat_btn {
-    position: fixed;
-    bottom: 8px;
-    right: 25px;
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    background: #007bff;
-    color: white;
-    border: none;
-    font-size: 30px;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-    transition: 0.25s;
-    z-index: 999999;
-}
-#ai_chat_btn:hover {
-    background: #0056b3;
-    transform: scale(1.10);
-}
+#cv_chat_btn {{
+    position: fixed; bottom: 22px; right: 22px;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #007bff; color: white; font-size: 30px;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0px 6px 18px rgba(0,0,0,.45);
+    cursor: pointer; z-index: 99999999998;
+}}
+#cv_chat_btn:hover {{ transform: scale(1.12); }}
 
-/* Chat popup */
-#ai_chat_box {
-    position: fixed;
-    bottom: 0 px;
-    right: 25px;
-    width: 380px;
-    height: 460px;
-    background: #020617;
-    border-radius: 14px;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.45);
-    overflow: hidden;
-    z-index: 999999999 !important; 
-    display: none;
-    transform: translateY(40px);
-    opacity: 0;
-    transition: all .35s ease;
-}
-#ai_chat_box.open {
-    display: block;
-    transform: translateY(0px);
-    opacity: 1;
-}
+#cv_chat_box {{
+    position: fixed; bottom: 10px; right: 22px;
+    width: 380px; height: 460px; border-radius: 14px;
+    background: #020617; border: 1px solid #334155;
+    box-shadow: 0px 16px 40px rgba(0,0,0,.65);
+    z-index: 99999999999; display: none;
+}}
+#cv_chat_box.open {{ display: block; }}
 
-/* Header */
-#ai_chat_header {
-    background: #007bff;
-    color: white;
-    padding: 10px 14px;
-    font-size: 18px;
-    font-weight: 600;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 50px;
-}
-#ai_chat_close {
-    cursor: pointer;
-    font-size: 22px;
-    font-weight: 900;
-}
-#ai_chat_close:hover {
-    color: #ffe5e5;
-}
-
-#ai_chat_iframe {
-    margin-top: 70px;
-}
+#cv_chat_header {{
+    height: 50px; background: #007bff; color: white;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; font-size: 19px; font-weight: 600;
+}}
+#cv_chat_close {{ font-size: 22px; cursor: pointer; }}
 </style>
 
-<button id="ai_chat_btn">💬</button>
+<button id="cv_chat_btn">💬</button>
 
-<div id="ai_chat_box">
-    <div id="ai_chat_header">
-        ChatMate
-        <span id="ai_chat_close">✖</span>
+<div id="cv_chat_box">
+    <div id="cv_chat_header">
+        CodeVerse AI <span id="cv_chat_close">✖</span>
     </div>
-    <iframe id="ai_chat_iframe" src="?chat=1&page=dashboard"
-        width="100%" height="410px" style="border:none;background:#020617;">
-    </iframe>
+    <iframe src="?chat=1&page=dashboard" width="100%" height="405px" style="border:none;background:#020617;"></iframe>
 </div>
 
 <script>
-const btn = document.getElementById("ai_chat_btn");
-const box = document.getElementById("ai_chat_box");
-const closeBtn = document.getElementById("ai_chat_close");
-btn.onclick = () => box.classList.add("open");
-closeBtn.onclick = () => box.classList.remove("open");
+document.addEventListener("DOMContentLoaded", function() {{
+    const btn = document.getElementById("cv_chat_btn");
+    const box = document.getElementById("cv_chat_box");
+    const closeBtn = document.getElementById("cv_chat_close");
+    btn.onclick = () => box.classList.add("open");
+    closeBtn.onclick = () => box.classList.remove("open");
+}});
 </script>
 """
 
-    import base64
+    components.html(chat_html, height=500, width=0)
 
-    encoded_chat = base64.b64encode(floating_chat.encode()).decode()
 
-    components.html(
-    f"""
-    <script>
-    const decoded = atob("{encoded_chat}");
-    const container = document.createElement('div');
-    container.innerHTML = decoded;
-    document.body.appendChild(container);
-    </script>
-    """,
-    height=500,
-    width=0,
-)
 if __name__ == "__main__":
     dashboard()
