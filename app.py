@@ -1,6 +1,11 @@
 import streamlit as st
 from dotenv import load_dotenv
 
+query = st.query_params
+if "page" in query:
+    st.session_state["auth_mode"] = query["page"]
+
+
 load_dotenv()
 # Initialize session
 if "authenticated" not in st.session_state:

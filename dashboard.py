@@ -106,40 +106,34 @@ def dashboard():
     # --------- PAGE CONFIG ----------
     st.set_page_config(page_title="CodeVerse AI", page_icon="🤖", layout="wide")
 
-    # --------- AUTH GUARD ----------
-    user_info = st.session_state.get("user")
-    if not user_info:
-        st.error("You must be logged in to view the dashboard.")
-        st.stop()
-
-    user_id = user_info["id"]
-    username = user_info["username"]
-
-    # --------- LOAD GROQ & CHAT MEMORY ----------
-    try:
-        groq_api_key = os.getenv("GROQ_API_KEY")
-        if not groq_api_key:
-            st.warning("GROQ_API_KEY not found in environment variables")
-            client = None
-        else:
-            client = Groq(api_key=groq_api_key)
-    except Exception as e:
-        st.error(f"Groq client initialization error: {e}")
-        client = None
-
-    if "chatbot_messages" not in st.session_state:
-        st.session_state.chatbot_messages = [
-            {
-                "role": "assistant",
-                "content": "Welcome to CodeVerse AI. How can I help you today? 😊",
-            }
-        ]
-
     # --------- CHECK IF THIS IS CHAT POPUP MODE ----------
     params = st.query_params
-    is_chat_mode = params.get("chat", "0") == "1"
+    is_chat_mode = params.get("chat", ["0"])[0] == "1"
 
     if is_chat_mode:
+        # --- Chat mode DOES NOT require login ---
+
+        # Load Groq just for chat mode
+        try:
+            groq_api_key = os.getenv("GROQ_API_KEY")
+            if not groq_api_key:
+                st.warning("GROQ_API_KEY not found in environment variables")
+                client = None
+            else:
+                client = Groq(api_key=groq_api_key)
+        except Exception as e:
+            st.error(f"Groq client initialization error: {e}")
+            client = None
+
+        # Chat memory
+        if "chatbot_messages" not in st.session_state:
+            st.session_state.chatbot_messages = [
+                {
+                    "role": "assistant",
+                    "content": "Welcome to CodeVerse AI. How can I help you today? 😊",
+                }
+            ]
+
         # Hide Streamlit chrome
         st.markdown(
             """
@@ -168,13 +162,11 @@ def dashboard():
             )
 
             if client:
-                # Typing animation
                 typing_msg = st.chat_message("assistant")
                 typing_placeholder = typing_msg.empty()
                 typing_placeholder.write(" typing...")
 
                 try:
-                    # Call Groq model
                     response = client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[
@@ -186,8 +178,6 @@ def dashboard():
                         + st.session_state.chatbot_messages,
                     )
                     reply = response.choices[0].message.content
-
-                    # Replace typing animation
                     typing_placeholder.empty()
                     st.chat_message("assistant").write(reply)
                     st.session_state.chatbot_messages.append(
@@ -201,12 +191,10 @@ def dashboard():
                         {"role": "assistant", "content": error_msg}
                     )
             else:
-                st.chat_message("assistant").write("Chat functionality is currently unavailable. Please check your API configuration.")
-                st.session_state.chatbot_messages.append(
-                    {"role": "assistant", "content": "Chat functionality is currently unavailable. Please check your API configuration."}
+                st.chat_message("assistant").write(
+                    "Chat functionality is currently unavailable. Please check your API configuration."
                 )
 
-        # Clear chat
         if st.button(" Clear Conversation"):
             st.session_state.chatbot_messages = [
                 {
@@ -216,7 +204,20 @@ def dashboard():
             ]
             st.rerun()
 
+        return  # ✅ Important: end function here for chat mode
+
+    # --------- AUTH GUARD FOR NORMAL DASHBOARD ----------
+    user_info = st.session_state.get("user")
+    if not user_info:
+        st.error("You must be logged in to view the dashboard.")
         st.stop()
+
+    user_id = user_info["id"]
+    username = user_info["username"]
+
+    # (rest of your normal dashboard code continues here…)
+
+
 
     # ================= NORMAL DASHBOARD =================
 
@@ -1101,133 +1102,107 @@ def dashboard():
 
     # Fixed Floating Chat Button (always visible)
     floating_chat = """
-    <style>
-    #ai_chat_btn {
-        position: fixed !important;
-        bottom: 25px !important;
-        right: 25px !important;
-        width: 65px !important;
-        height: 65px !important;
-        border-radius: 50% !important;
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
-        color: white !important;
-        border: none !important;
-        font-size: 30px !important;
-        cursor: pointer !important;
-        box-shadow: 0 6px 22px rgba(15,23,42,0.85) !important;
-        transition: 0.25s !important;
-        z-index: 999999 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    #ai_chat_btn:hover {
-        transform: scale(1.12) !important;
-        box-shadow: 0 10px 30px rgba(15,23,42,0.95) !important;
-    }
+<style>
+/* Floating button */
+#ai_chat_btn {
+    position: fixed;
+    bottom: 8px;
+    right: 25px;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    border: none;
+    font-size: 30px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    transition: 0.25s;
+    z-index: 999999;
+}
+#ai_chat_btn:hover {
+    background: #0056b3;
+    transform: scale(1.10);
+}
 
-    #ai_chat_box {
-        position: fixed !important;
-        bottom: 10px !important;
-        right: 25px !important;
-        width: 380px !important;
-        height: 460px !important;
-        background: #020617 !important;
-        border-radius: 16px !important;
-        box-shadow: 0 16px 40px rgba(0,0,0,0.65) !important;
-        overflow: hidden !important;
-        z-index: 999999 !important;
-        display: none !important;
-        transform: translateY(40px) !important;
-        opacity: 0 !important;
-        transition: all .35s ease !important;
-        border: 1px solid #334155 !important;
-    }
-    #ai_chat_box.open {
-        display: block !important;
-        transform: translateY(0px) !important;
-        opacity: 1 !important;
-    }
+/* Chat popup */
+#ai_chat_box {
+    position: fixed;
+    bottom: 0 px;
+    right: 25px;
+    width: 380px;
+    height: 460px;
+    background: #020617;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+    overflow: hidden;
+    z-index: 999999999 !important; 
+    display: none;
+    transform: translateY(40px);
+    opacity: 0;
+    transition: all .35s ease;
+}
+#ai_chat_box.open {
+    display: block;
+    transform: translateY(0px);
+    opacity: 1;
+}
 
-    [data-testid="stSidebar"] { overflow: hidden !important; }
+/* Header */
+#ai_chat_header {
+    background: #007bff;
+    color: white;
+    padding: 10px 14px;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+}
+#ai_chat_close {
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: 900;
+}
+#ai_chat_close:hover {
+    color: #ffe5e5;
+}
 
-    #ai_chat_header {
-        background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%) !important;
-        color: white !important;
-        padding: 10px 14px !important;
-        font-size: 18px !important;
-        font-weight: 600 !important;
-        display: flex !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        height: 50px !important;
-        z-index: 1000000000 !important;
-    }
-    #ai_chat_close {
-        cursor: pointer !important;
-        font-size: 22px !important;
-        font-weight: 900 !important;
-    }
-    #ai_chat_close:hover {
-        color: #ffe5e5 !important;
-    }
+#ai_chat_iframe {
+    margin-top: 70px;
+}
+</style>
 
-    #ai_chat_iframe {
-        margin-top: 60px !important;
-    }
-    </style>
+<button id="ai_chat_btn">💬</button>
 
-    <button id="ai_chat_btn">💬</button>
-
-    <div id="ai_chat_box">
-        <div id="ai_chat_header">
-            CodeVerse AI
-            <span id="ai_chat_close">✖</span>
-        </div>
-        <iframe id="ai_chat_iframe" src="/?chat=1"
-            width="100%"
-            height="410px"
-            style="border:none;background:#020617;"></iframe>
+<div id="ai_chat_box">
+    <div id="ai_chat_header">
+        ChatMate
+        <span id="ai_chat_close">✖</span>
     </div>
+    <iframe id="ai_chat_iframe" src="?chat=1&page=dashboard"
+        width="100%" height="410px" style="border:none;background:#020617;">
+    </iframe>
+</div>
 
-    <script>
-    const btn = document.getElementById("ai_chat_btn");
-    const box = document.getElementById("ai_chat_box");
-    const closeBtn = document.getElementById("ai_chat_close");
-
-    btn.onclick = () => {
-        box.classList.add("open");
-    };
-    closeBtn.onclick = () => {
-        box.classList.remove("open");
-    };
-
-    window.addEventListener('scroll', function() {
-        const chatBtn = document.getElementById('ai_chat_btn');
-        if (chatBtn) {
-            chatBtn.style.position = 'fixed';
-            chatBtn.style.bottom = '25px';
-            chatBtn.style.right = '25px';
-        }
-    });
-    </script>
-    """
+<script>
+const btn = document.getElementById("ai_chat_btn");
+const box = document.getElementById("ai_chat_box");
+const closeBtn = document.getElementById("ai_chat_close");
+btn.onclick = () => box.classList.add("open");
+closeBtn.onclick = () => box.classList.remove("open");
+</script>
+"""
 
     components.html(
-        f"""
-        <div style="height:0;width:0;">
-        {floating_chat}
-        </div>
-        """,
-        height=0,
-        width=0,
-        scrolling=False,
-    )
-
-
-if __name__ == "_main_":
+    f"<div style='height:0;width:0;'>{floating_chat}</div>",
+    height=500,
+    width=0
+)
+if __name__ == "__main__":
     dashboard()
