@@ -1205,7 +1205,7 @@ closeBtn.onclick = () => box.classList.remove("open");
     {floating_chat}
     </div>
     """,
-    height=0,
+    height=500,
     width=0,
     scrolling=False,
 )
