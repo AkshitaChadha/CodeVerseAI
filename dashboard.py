@@ -1201,13 +1201,13 @@ closeBtn.onclick = () => box.classList.remove("open");
 
     components.html(
     f"""
-    <div style='height:0;width:0;'>
-    {floating_chat}
-    </div>
+    <script>
+    const container = document.createElement('div');
+    container.innerHTML = `{floating_chat}`;
+    document.body.appendChild(container);
+    </script>
     """,
-    height=500,
-    width=0,
-    scrolling=False,
+    height=0,
 )
 if __name__ == "__main__":
     dashboard()
