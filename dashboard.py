@@ -850,10 +850,13 @@ def dashboard():
     if recent_files:
         for file in recent_files:
             filename = file["filename"]
+            file_lang = file.get("language", "javascript")
             encoded_filename = urllib.parse.quote(filename)
             editor_url = (
                 f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}"
-                f"?username={username}&filename={encoded_filename}&lang={file_lang}"
+                f"?username={urllib.parse.quote(username)}"
+                f"&filename={encoded_filename}"
+                f"&lang={urllib.parse.quote(file_lang)}"
             )
 
             st.markdown(
