@@ -853,7 +853,7 @@ def dashboard():
             encoded_filename = urllib.parse.quote(filename)
             editor_url = (
                 f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}"
-                f"?username={username}&filename={encoded_filename}"
+                f"?username={username}&filename={encoded_filename}&lang={file_lang}"
             )
 
             st.markdown(
