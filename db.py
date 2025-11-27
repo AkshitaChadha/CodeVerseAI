@@ -16,18 +16,32 @@ if not DATABASE_URL:
 
 
 def get_connection():
-    """Create a PostgreSQL DB connection"""
+    """Get database connection with proper error handling"""
+    global _connection
+    conn = None
     try:
+        # Close existing connection if any
+        if _connection and not _connection.closed:
+            _connection.close()
+        
+        # Create new connection
         conn = psycopg2.connect(
             DATABASE_URL,
             sslmode="require",
             cursor_factory=psycopg2.extras.RealDictCursor,
+            connect_timeout=10
         )
-        return conn
-    except Exception as e:
-        print("❌ Database connection error:", e)
+        _connection = conn
+        yield conn
+    except psycopg2.OperationalError as e:
+        print(f"Database connection error: {e}")
         raise e
-
+    except Exception as e:
+        print(f"Unexpected database error: {e}")
+        raise e
+    finally:
+        # Don't close connection here to allow reuse
+        pass
 
 def init_db():
     """Create tables if missing and ensure required columns exist"""
