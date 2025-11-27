@@ -499,8 +499,23 @@ def login():
                 st.rerun()
             else:
                 st.error("Invalid password.")
+                
         except Exception as e:
             st.error(f"Login failed: {str(e)}")
+            
+    st.markdown(
+        """
+        <div class="auth-switch" style="text-align:center; margin-top:20px;">
+            <div class="auth-switch-text">Don't have an account?</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("Create new account →", key="to_signup", use_container_width=True):
+        st.session_state["auth_mode"] = "signup"
+        st.rerun()       
+        
+    
 
 # ---------- RESET WITH OTP FLOW ----------
 
