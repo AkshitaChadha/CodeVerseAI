@@ -462,60 +462,45 @@ def login():
         st.rerun()
 
     if login_btn:
-        user = find_user_by_email(email)
+        # Add database connection test
+        try:
+            # Test if database is accessible
+            from db import init_db
+            init_db()
+        except Exception as e:
+            st.error(f"🚨 Database connection failed: {str(e)}")
+            st.info("Please check your database configuration.")
+            return
+            
         if not email or not password:
             st.error("Please enter both email and password.")
-        elif not user:
-            st.error("No account found with this email.")
-        elif check_password(password, user["password"]):
-            st.session_state["user"] = {
-                "id": user["id"],
-                "username": user["username"],
-            }
-            st.session_state["authenticated"] = True
-            st.session_state["auth_mode"] = "dashboard"
+            return
+            
+        try:
+            user = find_user_by_email(email)
+            if not user:
+                st.error("No account found with this email.")
+            elif check_password(password, user["password"]):
+                st.session_state["user"] = {
+                    "id": user["id"],
+                    "username": user["username"],
+                    "email": user["email"]  # Added email for consistency
+                }
+                st.session_state["authenticated"] = True
+                st.session_state["auth_mode"] = "dashboard"
 
-            # 🔹 record login for streaks
-            try:
-                record_login(user["id"])
-            except Exception as e:
-                print("record_login error:", e)
+                # Record login for streaks
+                try:
+                    record_login(user["id"])
+                except Exception as e:
+                    print("record_login error:", e)
 
-            st.session_state.pop("email", None)
-            st.session_state.pop("password", None)
-
-            st.success("✅ Login successful!")
-            # 🔹 removed extra sleep to make transition snappy
-            st.rerun()
-        else:
-            st.error("Invalid password.")
-
-    st.markdown(
-        """
-        <div class="auth-switch">
-            <div class="auth-switch-text">Don't have an account?</div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if st.button(
-        "Create new account →",
-        key="login_to_signup",
-        use_container_width=True,
-    ):
-        st.session_state["auth_mode"] = "signup"
-        st.rerun()
-
-    st.markdown(
-        """
-            <div class="auth-switch-note">
-                Pro tip: use a <span>strong unique password</span> for your CodeVerse account.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
+                st.success("✅ Login successful!")
+                st.rerun()
+            else:
+                st.error("Invalid password.")
+        except Exception as e:
+            st.error(f"Login failed: {str(e)}")
 
 # ---------- RESET WITH OTP FLOW ----------
 
