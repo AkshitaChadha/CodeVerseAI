@@ -606,7 +606,7 @@ def dashboard():
         padding: 18px;
         border: 1px solid #475569;
         transition: all 0.3s ease;
-        margin-bottom: 12px;
+        margin-bottom: 20px;
     }
     .activity-card:hover {
         transform: translateY(-2px);
@@ -739,10 +739,6 @@ def dashboard():
         )
 
         st.markdown(
-            "<button class='nav-btn'>⚙ Settings</button>", unsafe_allow_html=True
-        )
-
-        st.markdown(
             "<hr style='border:1px solid #334155; margin: 20px 0;'>",
             unsafe_allow_html=True,
         )
@@ -827,7 +823,7 @@ def dashboard():
             </a>
             <a class="ai-action-card" href="{quick_room_link('optimize')}" target="_blank">
                 <div class="ai-action-icon">⚡</div>
-                <div class="ai-action-title">Optimize Code</div>
+                <div class="ai-action-title">AI Code Assistant</div>
             </a>
         </div>
     </div>
@@ -881,7 +877,7 @@ def dashboard():
 
     # Create Project Form
     with st.form("create_project_form", clear_on_submit=True):
-        col1, col2, col3 = st.columns([2, 1, 1])
+        col1, col2 = st.columns([2, 1])
         with col1:
             new_project_name = st.text_input(
                 "Project name",
@@ -889,12 +885,6 @@ def dashboard():
                 label_visibility="collapsed",
             )
         with col2:
-            project_language = st.selectbox(
-                "Language",
-                ["python", "javascript", "java", "cpp", "html"],
-                label_visibility="collapsed",
-            )
-        with col3:
             create_project_btn = st.form_submit_button(
                 "🚀 Create Project", use_container_width=True
             )
@@ -1024,7 +1014,7 @@ def dashboard():
 
             # Add file form if this project is active
             if st.session_state.get("show_add_file_for") == project["id"]:
-                st.markdown("<div style='margin-left: 20px; margin-top: 15px;'>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-left: 20px; margin-top: 25px; margin-bottom:40px''>", unsafe_allow_html=True)
                 st.markdown("Add new file")
                 with st.form(f"add_file_form_{project['id']}"):
                     form_col1, form_col2, form_col3 = st.columns([3, 2, 1])
@@ -1072,7 +1062,7 @@ def dashboard():
             unsafe_allow_html=True,
         )
     with header_col2:
-        if st.button("🔄 Refresh tips", key="refresh_tips_btn"):
+        if st.button("🔄 Refresh", key="refresh_tips_btn"):
             st.session_state.coding_tips = random.sample(CODING_TIPS, 4)
             st.rerun()
 
@@ -1100,20 +1090,24 @@ def dashboard():
     st.markdown(tips_html, unsafe_allow_html=True)
 
     # ========= FIXED FLOATING CHAT BUTTON (GLOBAL, WORKS ON DEPLOY) =========
-    # We inject the button & popup into the PARENT page so position:fixed is
-    # relative to the viewport, not to the component iframe.
+    # This now ALWAYS cleans up any old icon/box before adding a new one,
+    # so you never get duplicates.
 
     chat_html = """
 <script>
 (function() {
-  const parentDoc = window.parent.document;
+  const parentDoc = window.parent && window.parent.document ? window.parent.document : document;
 
-  // Avoid duplicates on reruns
-  if (parentDoc.getElementById("cv_chat_btn")) {
-    return;
-  }
+  // Remove old elements if they exist (avoid duplicates on rerun)
+  const oldBtn = parentDoc.getElementById("cv_chat_btn");
+  if (oldBtn) oldBtn.remove();
+  const oldBox = parentDoc.getElementById("cv_chat_box");
+  if (oldBox) oldBox.remove();
+  const oldStyle = parentDoc.getElementById("cv_chat_style");
+  if (oldStyle) oldStyle.remove();
 
   const style = parentDoc.createElement("style");
+  style.id = "cv_chat_style";
   style.innerHTML = `
     #cv_chat_btn {
       position: fixed;
@@ -1198,8 +1192,6 @@ def dashboard():
 </script>
 """
 
-    # Height/width 0 so the component itself doesn't take space,
-    # it only injects the floating button into the parent page.
     components.html(chat_html, height=0, width=0)
 
 
