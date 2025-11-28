@@ -745,5 +745,5 @@ def app_main():
         st.rerun()
 
 # --- Run Page ---
-if _name_ == "_main_":
+if __name__ == "_main_":
     app_main()
