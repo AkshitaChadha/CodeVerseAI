@@ -409,6 +409,9 @@ def signup():
         if len(username) < 3:
             st.error("⚠ Username must be at least 3 characters")
             return
+        if username.isdigit():
+            st.error("⚠ Username cannot be only numbers. Please include letters.")
+            return
 
         # Email format
         import re
@@ -422,16 +425,16 @@ def signup():
             st.error("⚠ Password must be at least 6 characters long")
             return
         if not any(c.isupper() for c in password):
-            st.error("⚠ Password must contain at least 1 uppercase letter")
+            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
             return
         if not any(c.islower() for c in password):
-            st.error("⚠ Password must contain at least 1 lowercase letter")
+            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
             return
         if not any(c.isdigit() for c in password):
-            st.error("⚠ Password must contain at least 1 number")
+            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
             return
         if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>/?" for c in password):
-            st.error("⚠ Password must contain at least 1 special character")
+            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
             return
 
         # Confirm password match
@@ -753,16 +756,16 @@ def reset():
                 st.error("⚠ Password must be at least 6 characters long.")
                 return
             if not any(c.isupper() for c in new_pw):
-                st.error("⚠ Password must include at least one uppercase letter.")
+                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
                 return
             if not any(c.islower() for c in new_pw):
-                st.error("⚠ Password must include at least one lowercase letter.")
+                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
                 return
             if not any(c.isdigit() for c in new_pw):
-                st.error("⚠ Password must include at least one number.")
+                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
                 return
             if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>/?' for c in new_pw):
-                st.error("⚠ Password must include at least one special character.")
+                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
                 return
 
             # Confirm match
