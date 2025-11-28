@@ -376,73 +376,110 @@ def signup():
     )
 
     st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
-    with st.form("signup_form", clear_on_submit=True):
+
+    with st.form("signup_form", clear_on_submit=False):
+
         username = st.text_input("👤 Username")
         email = st.text_input("📧 Email")
         password = st.text_input("🔒 Password", type="password")
         confirm = st.text_input("✅ Confirm Password", type="password")
+        agree = st.checkbox("I agree to the Terms & Privacy Policy")
 
         col1, col2 = st.columns(2)
         with col1:
-            sign_btn = st.form_submit_button(
-                "🚀 Sign Up", use_container_width=True
-            )
+            sign_btn = st.form_submit_button("🚀 Sign Up", use_container_width=True)
         with col2:
-            back_btn = st.form_submit_button(
-                "← Login", use_container_width=True
-            )
+            back_btn = st.form_submit_button("← Login", use_container_width=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Back button
     if back_btn:
         st.session_state["auth_mode"] = "login"
         st.rerun()
 
+    # Validation on submit
     if sign_btn:
+        # Required fields
         if not username or not email or not password or not confirm:
-            st.error("All fields are required")
-        elif password != confirm:
-            st.error("Passwords do not match")
-        elif len(password) < 6:
-            st.error("Password must be at least 6 characters")
-        elif "@" not in email or "." not in email:
-            st.error("Please enter a valid email address")
-        elif find_user_by_email(email):
-            st.error("Email already registered")
-        else:
-            success = insert_user(username, email, password)
-            if success:
-                try:
-                    welcome_mail(email, username)
-                except Exception as e:
-                    print("Mail sending failed:", e)
+            st.error("⚠ All fields are required")
+            return
 
-                st.success("🎉 Account created successfully!")
-                st.session_state["auth_mode"] = "login"
-                st.rerun()
-            else:
-                st.error("Signup failed! Try again")
+        # Username length
+        if len(username) < 3:
+            st.error("⚠ Username must be at least 3 characters")
+            return
+
+        # Email format
+        import re
+        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        if not re.match(email_regex, email):
+            st.error("⚠ Enter a valid email address")
+            return
+
+        # Password strength
+        if len(password) < 6:
+            st.error("⚠ Password must be at least 6 characters long")
+            return
+        if not any(c.isupper() for c in password):
+            st.error("⚠ Password must contain at least 1 uppercase letter")
+            return
+        if not any(c.islower() for c in password):
+            st.error("⚠ Password must contain at least 1 lowercase letter")
+            return
+        if not any(c.isdigit() for c in password):
+            st.error("⚠ Password must contain at least 1 number")
+            return
+        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>/?" for c in password):
+            st.error("⚠ Password must contain at least 1 special character")
+            return
+
+        # Confirm password match
+        if password != confirm:
+            st.error("⚠ Passwords do not match")
+            return
+
+        # Terms & Privacy Agreement
+        if not agree:
+            st.error("⚠ You must agree to the Terms & Privacy Policy")
+            return
+
+        # Email already exists
+        if find_user_by_email(email):
+            st.error("⚠ Email already registered")
+            return
+
+        # Insert and send email
+        success = insert_user(username, email, password)
+        if success:
+            try:
+                welcome_mail(email, username)
+            except Exception as e:
+                print("Mail sending failed:", e)
+
+            st.success("🎉 Account created successfully! Redirecting to login...")
+            st.session_state["auth_mode"] = "login"
+            st.rerun()
+        else:
+            st.error("❌ Signup failed! Try again later")
 
     st.markdown(
         """
         <div class="auth-switch">
             <div class="auth-switch-text">Already have an account?</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    if st.button(
-        "Login to your account →",
-        key="signup_switch",
-        use_container_width=True,
-    ):
+    if st.button("Login to your account →", key="signup_switch", use_container_width=True):
         st.session_state["auth_mode"] = "login"
         st.rerun()
 
     st.markdown(
         """
-            <div class="auth-switch-note">
-                Secured with <span>OTP verification</span> and encrypted passwords.
-            </div>
+        <div class="auth-switch-note">
+            Secured with <span>OTP verification</span> and encrypted passwords.
         </div>
         """,
         unsafe_allow_html=True,
@@ -462,96 +499,102 @@ def login():
     )
 
     st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
-    with st.form("login_form"):
+
+    with st.form("login_form", clear_on_submit=False):
         email = st.text_input("📧 Email")
         password = st.text_input("🔒 Password", type="password")
 
         col1, col2 = st.columns(2)
         with col1:
-            login_btn = st.form_submit_button(
-                "🔑 Login", use_container_width=True
-            )
+            login_btn = st.form_submit_button("🔑 Login", use_container_width=True)
         with col2:
-            forgot_btn = st.form_submit_button(
-                "🔓 Forgot?", use_container_width=True
-            )
+            forgot_btn = st.form_submit_button("🔓 Forgot?", use_container_width=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Forgot Password button
     if forgot_btn:
         st.session_state["auth_mode"] = "reset"
         for key in ["reset_step", "reset_email", "otp_cooldown_until"]:
             st.session_state.pop(key, None)
         st.rerun()
 
+    # Login button validation
     if login_btn:
-        user = find_user_by_email(email)
+        import re
+        email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+
+        # Required fields
         if not email or not password:
-            st.error("Please enter both email and password.")
-        elif not user:
-            st.error("No account found with this email.")
-        elif check_password(password, user["password"]):
+            st.error("⚠ Please enter both email and password.")
+            return
 
-            st.session_state["authenticated"] = True
-            st.session_state["user"] = {
-                "id": user["id"],
-                "username": user["username"],
-            }
-            st.session_state["user_email"] = email
+        # Email format
+        if not re.match(email_regex, email):
+            st.error("⚠ Please enter a valid email address.")
+            return
 
-            session_token = f"TOKEN-{user['id']}-{int(time.time())}"
-            st.session_state["access_token"] = session_token
+        # Check if user exists
+        user = find_user_by_email(email)
+        if not user:
+            st.error("⚠ No account found with this email.")
+            return
 
-            # Browser token
-            st.write(f"""
+        # Check password
+        if not check_password(password, user["password"]):
+            st.error("⚠ Incorrect password.")
+            return
+
+        # If all validations pass → Login
+        st.session_state["authenticated"] = True
+        st.session_state["user"] = {
+            "id": user["id"],
+            "username": user["username"],
+        }
+        st.session_state["user_email"] = email
+
+        # Session token
+        session_token = f"TOKEN-{user['id']}-{int(time.time())}"
+        st.session_state["access_token"] = session_token
+
+        # Save token in browser
+        st.write(
+            f"""
             <script>
-            localStorage.setItem("accessToken", "{session_token}");
+                localStorage.setItem("accessToken", "{session_token}");
             </script>
-            """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True,
+        )
 
-            try:
-                record_login(user["id"])
-            except Exception as e:
-                print("record_login error:", e)
+        # Record login history
+        try:
+            record_login(user["id"])
+        except Exception as e:
+            print("record_login error:", e)
 
-            st.session_state["auth_mode"] = "dashboard"
-            st.rerun()
+        st.success("🎉 Login successful! Redirecting...")
+        st.session_state["auth_mode"] = "dashboard"
+        st.rerun()
 
-
-            # 🔹 record login for streaks
-            try:
-                record_login(user["id"])
-            except Exception as e:
-                print("record_login error:", e)
-
-            st.session_state.pop("email", None)
-            st.session_state.pop("password", None)
-
-            st.success("✅ Login successful!")
-            st.rerun()
-        else:
-            st.error("Invalid password.")
-
+    # Bottom switch to signup
     st.markdown(
         """
         <div class="auth-switch">
             <div class="auth-switch-text">Don't have an account?</div>
+        </div>
         """,
         unsafe_allow_html=True,
     )
 
-    if st.button(
-        "Create new account →",
-        key="login_to_signup",
-        use_container_width=True,
-    ):
+    if st.button("Create new account →", key="login_to_signup", use_container_width=True):
         st.session_state["auth_mode"] = "signup"
         st.rerun()
 
     st.markdown(
         """
-            <div class="auth-switch-note">
-                Pro tip: use a <span>strong unique password</span> for your CodeVerse account.
-            </div>
+        <div class="auth-switch-note">
+            Your credentials are encrypted and protected.
         </div>
         """,
         unsafe_allow_html=True,
@@ -569,6 +612,9 @@ def reset():
 
     step = st.session_state["reset_step"]
 
+    # ------------------------------------------
+    # STEP 1: EMAIL
+    # ------------------------------------------
     if step == "email":
         render_header(
             title="Reset Password",
@@ -577,36 +623,46 @@ def reset():
         )
 
         st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
-        with st.form("reset_email_form"):
+        with st.form("reset_email_form", clear_on_submit=False):
             email = st.text_input("📧 Registered Email")
-            send_btn = st.form_submit_button(
-                "📨 Send OTP", use_container_width=True
-            )
+            send_btn = st.form_submit_button("📨 Send OTP", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         if send_btn:
+            import re
+            email_regex = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+
+            if not email:
+                st.error("⚠ Please enter your email.")
+                return
+            if not re.match(email_regex, email):
+                st.error("⚠ Please enter a valid email address.")
+                return
+
             user = find_user_by_email(email)
             if not user:
-                st.error("No account found with this email.")
+                st.error("⚠ No account found with this email.")
+                return
+
+            otp = generate_otp()
+            expiry = int(time.time()) + 300
+            save_password_reset_otp(email, otp, expiry)
+
+            try:
+                send_otp_mail(email, otp)
+            except Exception as e:
+                print("OTP mail error:", e)
+                st.error("❌ Could not send OTP. Please try again.")
             else:
-                otp = generate_otp()
-                expiry = int(time.time()) + 300
-                save_password_reset_otp(email, otp, expiry)
+                st.session_state["reset_email"] = email
+                st.session_state["otp_cooldown_until"] = int(time.time()) + 30
+                st.session_state["reset_step"] = "otp"
+                st.success("✅ OTP sent to your email")
+                st.rerun()
 
-                try:
-                    send_otp_mail(email, otp)
-                except Exception as e:
-                    print("OTP mail error:", e)
-                    st.error("Could not send OTP. Please try again.")
-                else:
-                    st.session_state["reset_email"] = email
-                    st.session_state["otp_cooldown_until"] = (
-                        int(time.time()) + 30
-                    )
-                    st.session_state["reset_step"] = "otp"
-                    st.success("✅ OTP sent to your email")
-                    st.rerun()
-
+    # ------------------------------------------
+    # STEP 2: OTP
+    # ------------------------------------------
     elif step == "otp":
         render_header(
             title="Verify OTP",
@@ -619,41 +675,43 @@ def reset():
             st.info(f"📧 OTP sent to: *{email}*")
 
         st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
-        with st.form("otp_form"):
+        with st.form("otp_form", clear_on_submit=False):
             otp_input = st.text_input("🔢 Enter OTP")
-
             col1, col2 = st.columns(2)
             with col1:
-                verify_btn = st.form_submit_button(
-                    "✅ Verify", use_container_width=True
-                )
+                verify_btn = st.form_submit_button("✅ Verify", use_container_width=True)
             with col2:
-                resend_btn = st.form_submit_button(
-                    "🔄 Resend", use_container_width=True
-                )
+                resend_btn = st.form_submit_button("🔄 Resend", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # OTP Verification
         if verify_btn:
+            if not otp_input:
+                st.error("⚠ Please enter OTP.")
+                return
+            if not otp_input.isdigit() or len(otp_input) != 6:
+                st.error("⚠ OTP must be a 6-digit number.")
+                return
+
             record = get_password_reset_record(email)
             now = int(time.time())
             if not record:
-                st.error("No active OTP found. Please resend OTP.")
+                st.error("⚠ No active OTP found. Please resend OTP.")
+            elif now > record["otp_expiry"]:
+                st.error("⚠ OTP has expired. Resend OTP.")
+            elif otp_input != record["otp_code"]:
+                st.error("⚠ Invalid OTP. Please check and try again.")
             else:
-                if now > record["otp_expiry"]:
-                    st.error("OTP has expired. Please resend OTP.")
-                elif otp_input != record["otp_code"]:
-                    st.error("Invalid OTP. Please check and try again.")
-                else:
-                    st.success("✅ OTP verified!")
-                    st.session_state["reset_step"] = "new_password"
-                    st.rerun()
+                st.success("🎉 OTP verified!")
+                st.session_state["reset_step"] = "new_password"
+                st.rerun()
 
+        # OTP Resend
         if resend_btn:
             now = int(time.time())
             cooldown_until = st.session_state.get("otp_cooldown_until", 0)
             if now < cooldown_until:
-                remaining = cooldown_until - now
-                st.warning(f"⏰ Wait {remaining}s before resending")
+                st.warning(f"⏰ Wait {cooldown_until - now}s before requesting again.")
             else:
                 otp = generate_otp()
                 expiry = int(time.time()) + 300
@@ -661,14 +719,15 @@ def reset():
                 try:
                     send_otp_mail(email, otp)
                 except Exception as e:
-                    print("OTP mail resend error:", e)
-                    st.error("Could not resend OTP. Please try again.")
+                    print("OTP resend error:", e)
+                    st.error("❌ Could not resend OTP.")
                 else:
-                    st.success("✅ New OTP sent!")
-                    st.session_state["otp_cooldown_until"] = (
-                        int(time.time()) + 30
-                    )
+                    st.success("📨 New OTP sent!")
+                    st.session_state["otp_cooldown_until"] = int(time.time()) + 30
 
+    # ------------------------------------------
+    # STEP 3: NEW PASSWORD
+    # ------------------------------------------
     elif step == "new_password":
         render_header(
             title="New Password",
@@ -677,49 +736,60 @@ def reset():
         )
 
         st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
-        with st.form("new_password_form"):
+        with st.form("new_password_form", clear_on_submit=False):
             new_pw = st.text_input("🔒 New Password", type="password")
-            confirm_pw = st.text_input(
-                "✅ Confirm Password", type="password"
-            )
-
-            reset_btn = st.form_submit_button(
-                "🔄 Reset", use_container_width=True
-            )
+            confirm_pw = st.text_input("✅ Confirm Password", type="password")
+            reset_btn = st.form_submit_button("🔄 Reset", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         if reset_btn:
+            # Required
+            if not new_pw or not confirm_pw:
+                st.error("⚠ Please fill both password fields.")
+                return
+
+            # Strength validation
+            if len(new_pw) < 6:
+                st.error("⚠ Password must be at least 6 characters long.")
+                return
+            if not any(c.isupper() for c in new_pw):
+                st.error("⚠ Password must include at least one uppercase letter.")
+                return
+            if not any(c.islower() for c in new_pw):
+                st.error("⚠ Password must include at least one lowercase letter.")
+                return
+            if not any(c.isdigit() for c in new_pw):
+                st.error("⚠ Password must include at least one number.")
+                return
+            if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>/?' for c in new_pw):
+                st.error("⚠ Password must include at least one special character.")
+                return
+
+            # Confirm match
+            if new_pw != confirm_pw:
+                st.error("⚠ Passwords do not match.")
+                return
+
+            # Update DB
             email = st.session_state.get("reset_email")
-            if not email:
-                st.error("Something went wrong. Please restart.")
-            elif new_pw != confirm_pw:
-                st.warning("Passwords do not match.")
+            updated = update_password(email, new_pw)
+            if updated:
+                clear_password_reset(email)
+                st.success("🎉 Password reset successful!")
+                for key in ["reset_step", "reset_email", "otp_cooldown_until"]:
+                    st.session_state.pop(key, None)
+                st.session_state["auth_mode"] = "login"
+                st.rerun()
             else:
-                updated = update_password(email, new_pw)
-                if updated:
-                    clear_password_reset(email)
-                    st.success("✅ Password reset successful!")
-                    for key in [
-                        "reset_step",
-                        "reset_email",
-                        "otp_cooldown_until",
-                    ]:
-                        st.session_state.pop(key, None)
-                    st.session_state["auth_mode"] = "login"
-                    st.rerun()
-                else:
-                    st.error("Failed to update password.")
+                st.error("❌ Failed to update password. Please try again.")
 
+    # ------------------------------------------
+    # Back to Login
+    # ------------------------------------------
     st.markdown('<div class="auth-switch">', unsafe_allow_html=True)
-
-    if st.button(
-        "← Back to Login",
-        key="reset_to_login",
-        use_container_width=True,
-    ):
+    if st.button("← Back to Login", key="reset_to_login", use_container_width=True):
         st.session_state["auth_mode"] = "login"
         st.rerun()
-
     st.markdown(
         """
         <div class="auth-switch-note">
