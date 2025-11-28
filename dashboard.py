@@ -48,7 +48,14 @@ except Exception as e:
     st.error(f"Database initialization error: {e}")
 
 # Local editor frontend (port 5000 for local)
-EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
+def open_editor(room_id, username):
+    editor_url = f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}"
+    st.markdown(f"""
+        <script>
+            window.open("{editor_url}", "_blank");
+        </script>
+    """, unsafe_allow_html=True)
+
 
 # Updated Coding Tips with better, shorter shortcuts & tricks
 CODING_TIPS = [
