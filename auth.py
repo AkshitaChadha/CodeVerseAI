@@ -22,25 +22,44 @@ def st_errors_style():
     st.markdown(
         """
         <style>
+        /* Base component */
         .stAlert{
             border-radius: 12px !important;
             font-weight: 600 !important;
-            border: 1px solid rgba(255,255,255,0.1) !important;
         }
-        .stAlert div[role="alert"]{
-            background: rgba(220, 38, 38, 0.9) !important;
-            border: 1px solid rgba(185, 28, 28, 0.5) !important;
+
+        /* ERROR (default red) */
+        .stAlert div[role="alert"]:has(svg[data-testid="stNotificationIcon-error"]) {
+            background: rgba(220, 38, 38, 0.92) !important;
+            border: 1px solid rgba(185, 28, 28, 0.6) !important;
+            color: #fff !important;
+        }
+
+        /* SUCCESS (GREEN STRIP) */
+        .stAlert div[role="alert"]:has(svg[data-testid="stNotificationIcon-success"]) {
+            background: rgba(34, 197, 94) !important;
+            border: 1px solid rgba(21, 128, 61) !important;
+            color: #ecfdf5 !important;
+        }
+
+        /* INFO (optional light blue) */
+        .stAlert div[role="alert"]:has(svg[data-testid="stNotificationIcon-info"]) {
+            background: rgba(59, 130, 246, 0.9) !important;
+            border: 1px solid rgba(37, 99, 235, 0.6) !important;
             color: white !important;
         }
-        .stSuccess div[role="alert"]{
-            background: rgba(34, 197, 94, 0.9) !important;
-            border: 1px solid rgba(21, 128, 61, 0.5) !important;
-            color: white !important;
+
+        /* WARNING (yellow) */
+        .stAlert div[role="alert"]:has(svg[data-testid="stNotificationIcon-warning"]) {
+            background: rgba(234, 179, 8, 0.92) !important;
+            border: 1px solid rgba(202, 138, 4, 0.6) !important;
+            color: #1f2937 !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
 
 
 def inject_auth_css():
@@ -89,12 +108,12 @@ def inject_auth_css():
             padding: 32px 0 24px !important;         /* less dead space at top */
         }
 
-        /* Compact auth card (no visible border) */
+        /* Compact auth card (narrower form) */
         .main .block-container {
-            max-width: 420px !important;
+            max-width: 360px !important;             /* 🔽 was 420px */
             width: 100% !important;
             margin: 0 auto !important;
-            padding: 2.0rem 2.3rem 2.1rem !important; /* slightly tighter top padding */
+            padding: 2.0rem 1.9rem 2.0rem !important;
             background: radial-gradient(circle at top left, #111827 0, #020617 55%) !important;
             border-radius: 18px !important;
             box-shadow: 0 22px 42px rgba(15, 23, 42, 0.9) !important;
@@ -194,17 +213,16 @@ def inject_auth_css():
         }
 
         .auth-inner {
-            max-width: 340px;
+            max-width: 300px;                        /* 🔽 was 340px */
             margin: 0 auto;
         }
 
-        div[data-testid="stForm"] {
-            padding: 15px;
-            margin: 10px;
-        }
-
-        div[data-testid="stTextInput"] {
+        /* NARROWER INPUT BOXES */
+        .auth-inner div[data-testid="stTextInput"] {
             margin-bottom: 0.95rem !important;
+            max-width: 260px !important;             /* 🔽 input width */
+            margin-left: auto !important;
+            margin-right: auto !important;
         }
 
         div[data-testid="stTextInput"] input {
@@ -239,7 +257,7 @@ def inject_auth_css():
             font-weight: 600 !important;
             font-size: 0.9rem !important;
             border: none !important;
-            margin-top: 0.25rem !important;
+            margin-top: 0.5rem !important;
             background: var(--gradient-primary) !important;
             color: #f9fafb !important;
             box-shadow: 0 10px 22px rgba(15, 118, 238, 0.55) !important;
@@ -307,6 +325,10 @@ def inject_auth_css():
 
             .auth-inner {
                 max-width: 100%;
+            }
+
+            .auth-inner div[data-testid="stTextInput"]{
+                max-width: 100% !important;
             }
         }
         </style>
@@ -462,60 +484,59 @@ def login():
         st.rerun()
 
     if login_btn:
-        # Add database connection test
-        try:
-            # Test if database is accessible
-            from db import init_db
-            init_db()
-        except Exception as e:
-            st.error(f"🚨 Database connection failed: {str(e)}")
-            st.info("Please check your database configuration.")
-            return
-            
+        user = find_user_by_email(email)
         if not email or not password:
             st.error("Please enter both email and password.")
-            return
-            
-        try:
-            user = find_user_by_email(email)
-            if not user:
-                st.error("No account found with this email.")
-            elif check_password(password, user["password"]):
-                st.session_state["user"] = {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "email": user["email"]  # Added email for consistency
-                }
-                st.session_state["authenticated"] = True
-                st.session_state["auth_mode"] = "dashboard"
+        elif not user:
+            st.error("No account found with this email.")
+        elif check_password(password, user["password"]):
+            st.session_state["user"] = {
+                "id": user["id"],
+                "username": user["username"],
+            }
+            st.session_state["authenticated"] = True
+            st.session_state["auth_mode"] = "dashboard"
 
-                # Record login for streaks
-                try:
-                    record_login(user["id"])
-                except Exception as e:
-                    print("record_login error:", e)
+            # 🔹 record login for streaks
+            try:
+                record_login(user["id"])
+            except Exception as e:
+                print("record_login error:", e)
 
-                st.success("✅ Login successful!")
-                st.rerun()
-            else:
-                st.error("Invalid password.")
-                
-        except Exception as e:
-            st.error(f"Login failed: {str(e)}")
-            
+            st.session_state.pop("email", None)
+            st.session_state.pop("password", None)
+
+            st.success("✅ Login successful!")
+            st.rerun()
+        else:
+            st.error("Invalid password.")
+
     st.markdown(
         """
-        <div class="auth-switch" style="text-align:center; margin-top:20px;">
+        <div class="auth-switch">
             <div class="auth-switch-text">Don't have an account?</div>
         """,
         unsafe_allow_html=True,
     )
 
-    if st.button("Create new account →", key="to_signup", use_container_width=True):
+    if st.button(
+        "Create new account →",
+        key="login_to_signup",
+        use_container_width=True,
+    ):
         st.session_state["auth_mode"] = "signup"
-        st.rerun()       
-        
-    
+        st.rerun()
+
+    st.markdown(
+        """
+            <div class="auth-switch-note">
+                Pro tip: use a <span>strong unique password</span> for your CodeVerse account.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # ---------- RESET WITH OTP FLOW ----------
 
@@ -575,7 +596,7 @@ def reset():
 
         email = st.session_state.get("reset_email", "")
         if email:
-            st.info(f"📧 OTP sent to: **{email}**")
+            st.info(f"📧 OTP sent to: *{email}*")
 
         st.markdown('<div class="auth-inner">', unsafe_allow_html=True)
         with st.form("otp_form"):
@@ -710,5 +731,5 @@ def main():
         dashboard()
 
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     main()
