@@ -2,7 +2,13 @@ import streamlit as st
 from dotenv import load_dotenv
 
 query = st.query_params
-if "page" in query:
+
+# Auto-login if token is passed from editor
+if "token" in query:
+    st.session_state["authenticated"] = True
+    st.session_state["auth_token"] = query["token"]
+    st.session_state["auth_mode"] = "dashboard"
+elif "page" in query:
     st.session_state["auth_mode"] = query["page"]
 
 
