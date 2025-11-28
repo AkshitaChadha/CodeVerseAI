@@ -425,16 +425,32 @@ def signup():
             st.error("⚠ Password must be at least 6 characters long")
             return
         if not any(c.isupper() for c in password):
-            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+            st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
             return
         if not any(c.islower() for c in password):
-            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+            st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
             return
         if not any(c.isdigit() for c in password):
-            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+            st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
             return
         if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>/?" for c in password):
-            st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+            st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
             return
 
         # Confirm password match
@@ -756,16 +772,32 @@ def reset():
                 st.error("⚠ Password must be at least 6 characters long.")
                 return
             if not any(c.isupper() for c in new_pw):
-                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+                st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
                 return
             if not any(c.islower() for c in new_pw):
-                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+                st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
                 return
             if not any(c.isdigit() for c in new_pw):
-                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+                st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
                 return
             if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>/?' for c in new_pw):
-                st.error("⚠ Password must contain at least 1 uppercase,lowercase letter ,number and special character.")
+                st.error("⚠ Password must atleast contain " \
+            "• A uppercase" \
+            "• A lowercase letter" \
+            "• A number" \
+            "• A special character")
                 return
 
             # Confirm match
