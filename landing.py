@@ -348,61 +348,6 @@ def inject_custom_css():
             font-size: 1rem;
         }
         
-        /* Testimonials Section */
-        .testimonials-section {
-            padding: 5rem 5rem;
-            background: var(--dark-bg);
-            text-align: center;
-        }
-        
-        .testimonials-section h3 {
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .testimonials-container {
-            display: flex;
-            justify-content: space-between;
-            gap: 2rem;
-        }
-        
-        .testimonial {
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 20px;
-            text-align: left;
-            border: 1px solid var(--border-color);
-            flex: 1;
-        }
-        
-        .testimonial-text {
-            color: var(--text-secondary);
-            font-style: italic;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-        
-        .testimonial-author {
-            display: flex;
-            align-items: center;
-        }
-        
-        .author-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--gradient-primary);
-            margin-right: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-        
-        .author-info h5 { margin: 0; font-weight: 600; }
-        .author-info p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
-        
         /* CTA Section */
         .cta-section {
             padding: 8rem 5rem;
@@ -431,6 +376,12 @@ def inject_custom_css():
         }
         
         .cta-content { position: relative; z-index: 2; }
+
+        .cta-title {
+            font-size: 2.8rem;
+            margin-bottom: 2rem;
+            font-weight: 800;
+        }
         
         .ai-facts-grid {
             display: grid;
@@ -458,6 +409,70 @@ def inject_custom_css():
         .fact-icon { font-size: 2.5rem; margin-bottom: 1rem; }
         .fact-text { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.8rem; line-height: 1.4; }
         .fact-subtext { font-size: 0.9rem; opacity: 0.9; font-style: italic; line-height: 1.6; }
+        
+        /* Contact Section */
+        .contact-section {
+            padding: 5rem 5rem;
+            background: var(--dark-bg);
+            text-align: center;
+        }
+
+        .contact-section h3 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+
+        .contact-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+        }
+
+        .contact-grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-card {
+            flex: 1;
+            min-width: 260px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .contact-card h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .contact-role {
+            margin-bottom: 1.2rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .contact-links a {
+            color: var(--accent-cyan);
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .contact-links a:hover {
+            text-decoration: underline !important;
+        }
         
         /* Footer */
         .footer {
@@ -522,10 +537,6 @@ def app_main():
                 <div class="brand-subtitle">Collaborative Code Editor</div>
             </div>
             <div class="navbar-right">
-                <a href="?section=about" class="nav-link">About</a>
-                <a href="?section=features" class="nav-link">Features</a>
-                <a href="?section=testimonials" class="nav-link">Testimonials</a>
-                <a href="?section=contact" class="nav-link">Contact</a>
                 <a href="?login" class="nav-btn-secondary">Login</a>
                 <a href="?signup" class="nav-btn-primary">Get Started</a>
             </div>
@@ -533,7 +544,7 @@ def app_main():
     """, unsafe_allow_html=True)
 
     # Show appropriate section based on navigation
-    if st.session_state.current_section == "hero" or st.session_state.current_section not in ["about", "features", "testimonials", "contact"]:
+    if st.session_state.current_section == "hero" or st.session_state.current_section not in ["about", "features", "contact"]:
         # Hero Section
         st.markdown("""
             <div class="hero">
@@ -640,44 +651,11 @@ def app_main():
             </div>
         """, unsafe_allow_html=True)
     
-    # Testimonials Section
-    if st.session_state.current_section == "testimonials" or st.session_state.current_section == "hero":
-        st.markdown("""
-            <div class="testimonials-section">
-                <h3>What Developers Say</h3>
-                <div class="testimonials-container">
-                    <div class="testimonial">
-                        <div class="testimonial-text">
-                            "CodeVerse AI has completely transformed how I approach coding. The AI suggestions are incredibly accurate and have cut my development time in half."
-                        </div>
-                        <div class="testimonial-author">
-                            <div class="author-avatar">SJ</div>
-                            <div class="author-info">
-                                <h5>Sarah Johnson</h5>
-                                <p>Senior Full-Stack Developer</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="testimonial">
-                        <div class="testimonial-text">
-                            "As a coding bootcamp instructor, I recommend CodeVerse AI to all my students. It's like having a personal tutor available 24/7."
-                        </div>
-                        <div class="testimonial-author">
-                            <div class="author-avatar">MR</div>
-                            <div class="author-info">
-                                <h5>Michael Rodriguez</h5>
-                                <p>Lead Instructor at DevAcademy</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
     # CTA Section - Always show
     st.markdown("""
         <div class="cta-section">
             <div class="cta-content">
+                <h3 class="cta-title" style="font-size:50px">AI-Powered Tips 💡</h3>
                 <div class="ai-facts-grid">
                     <div class="ai-fact">
                         <div class="fact-icon">🚀</div>
@@ -693,6 +671,37 @@ def app_main():
                         <div class="fact-icon">⚡</div>
                         <div class="fact-text">68% Faster Project Completion</div>
                         <div class="fact-subtext">From MVP to production-ready code with smart refactoring and documentation.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Contact Section (always just above footer)
+    st.markdown("""
+        <div class="contact-section" id="contact">
+            <h2>Contact the Team</h2>
+            <p class="contact-desc">Got questions or ideas? Reach out to the CodeVerse AI team on GitHub and LinkedIn.</p>
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <h4>Akshit Kumar</h4>
+                    <div class="contact-links">
+                        <a href="https://github.com/AkshitKuma" target="_blank">GitHub: @AshitKuma</a>
+                        <a href="https://www.linkedin.com/in/-divyachhabra-" target="_blank">LinkedIn: /in/-akshitkumar-</a>
+                    </div>
+                </div>
+                <div class="contact-card">
+                    <h4>Akshita Chadha</h4>
+                    <div class="contact-links">
+                        <a href="https://github.com/AkshitaChadha/" target="_blank">GitHub: @AkshitaChadha</a>
+                        <a href="http://www.linkedin.com/in/akshita-chadha-67a214359" target="_blank">LinkedIn: /in/-akshitachadha-</a>
+                    </div>
+                </div>
+                <div class="contact-card">
+                    <h4>Divya Chhabra</h4>
+                    <div class="contact-links">
+                        <a href="https://github.com/Divya-Chhabraa" target="_blank">GitHub: @Divya-Chhabraa</a>
+                        <a href="https://www.linkedin.com/in/-divyachhabra-" target="_blank">LinkedIn: /in/-divyachhabra-</a>
                     </div>
                 </div>
             </div>
@@ -718,7 +727,6 @@ def app_main():
                     <h4>Company</h4>
                     <ul class="footer-links">
                         <li><a href="?section=about">About</a></li>
-                        <li><a href="?section=testimonials">Testimonials</a></li>
                     </ul>
                 </div>
             </div>
@@ -737,5 +745,5 @@ def app_main():
         st.rerun()
 
 # --- Run Page ---
-if __name__ == "_main_":
+if _name_ == "_main_":
     app_main()
