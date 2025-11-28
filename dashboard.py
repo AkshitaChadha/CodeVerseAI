@@ -38,6 +38,7 @@ except ImportError as e:
     def delete_project_file(file_id): return True
     def get_recent_files(user_id, limit=5): return []
 
+
 # ---------- INIT ----------
 load_dotenv()
 
@@ -214,10 +215,6 @@ def dashboard():
 
     user_id = user_info["id"]
     username = user_info["username"]
-
-    # (rest of your normal dashboard code continues here…)
-
-
 
     # ================= NORMAL DASHBOARD =================
 
@@ -669,14 +666,6 @@ def dashboard():
         margin: 12px 0;
     }
 
-    /* Fixed Chat Button */
-    .fixed-chat {
-        position: fixed !important;
-        bottom: 25px !important;
-        right: 25px !important;
-        z-index: 999999 !important;
-    }
-
     /* No Activity Message */
     .no-activity {
         text-align: center;
@@ -845,18 +834,15 @@ def dashboard():
     """
     st.markdown(ai_actions_html, unsafe_allow_html=True)
 
-    # --------- RECENT FILES SECTION (compact horizontal style) ----------
-    st.markdown("<div class='tips-title'>🚀 Recent Files</div>", unsafe_allow_html=True,)
+    # --------- RECENT FILES SECTION ----------
+    st.markdown("<div class='tips-title'>🚀 Recent Files</div>", unsafe_allow_html=True)
     if recent_files:
         for file in recent_files:
             filename = file["filename"]
-            file_lang = file.get("language", "javascript")
             encoded_filename = urllib.parse.quote(filename)
             editor_url = (
                 f"{EDITOR_FRONTEND_URL}/editor/{file['room_id']}"
-                f"?username={urllib.parse.quote(username)}"
-                f"&filename={encoded_filename}"
-                f"&lang={urllib.parse.quote(file_lang)}"
+                f"?username={username}&filename={encoded_filename}"
             )
 
             st.markdown(
@@ -891,7 +877,7 @@ def dashboard():
         )
 
     # --------- PROJECTS SECTION ----------
-    st.markdown("<div class='tips-title'>📂 Your Projects</div>",unsafe_allow_html=True,)
+    st.markdown("<div class='tips-title'>📂 Your Projects</div>", unsafe_allow_html=True)
 
     # Create Project Form
     with st.form("create_project_form", clear_on_submit=True):
@@ -919,7 +905,7 @@ def dashboard():
             else:
                 try:
                     create_project(user_id, new_project_name.strip())
-                    st.success(f"Project *{new_project_name}* created.")
+                    st.success(f"Project {new_project_name} created.")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error creating project: {e}")
@@ -943,25 +929,31 @@ def dashboard():
                 
                 with col1:
                     st.markdown(f"### 📁 {project['name']}")
-                    st.markdown(f"<div style='color: #94a3b8; font-size: 14px; margin-top: -10px; margin-bottom: 10px;'>{len(files)} file(s)</div>", 
-                               unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='color: #94a3b8; font-size: 14px; margin-top: -10px; margin-bottom: 10px;'>{len(files)} file(s)</div>", 
+                        unsafe_allow_html=True
+                    )
                 
                 with col2:
                     # Action buttons container
                     btn_col1, btn_col2 = st.columns(2)
                     with btn_col1:
-                        if st.button("➕ Add File", 
-                                    key=f"add_{project['id']}",
-                                    use_container_width=True,
-                                    help="Add a new file to this project"):
+                        if st.button(
+                            "➕ Add File", 
+                            key=f"add_{project['id']}",
+                            use_container_width=True,
+                            help="Add a new file to this project"
+                        ):
                             st.session_state["show_add_file_for"] = project["id"]
                             st.rerun()
                     
                     with btn_col2:
-                        if st.button("🗑", 
-                                    key=f"delete_{project['id']}",
-                                    use_container_width=True,
-                                    help="Delete this project"):
+                        if st.button(
+                            "🗑", 
+                            key=f"delete_{project['id']}",
+                            use_container_width=True,
+                            help="Delete this project"
+                        ):
                             if st.session_state.get(f"confirm_delete_{project['id']}"):
                                 try:
                                     if delete_project(project["id"]):
@@ -994,8 +986,10 @@ def dashboard():
                         
                         with file_col1:
                             st.markdown(f"📄 {filename}")
-                            st.markdown(f"<div style='color: #94a3b8; font-size: 12px; margin-top: -8px;'>Language: {file_lang.upper()}</div>", 
-                                       unsafe_allow_html=True)
+                            st.markdown(
+                                f"<div style='color: #94a3b8; font-size: 12px; margin-top: -8px;'>Language: {file_lang.upper()}</div>", 
+                                unsafe_allow_html=True
+                            )
                         
                         with file_col2:
                             st.markdown(
@@ -1004,10 +998,12 @@ def dashboard():
                             )
                         
                         with file_col3:
-                            if st.button("🗑", 
-                                        key=f"delfile_{f['id']}",
-                                        help=f"Delete {filename}",
-                                        use_container_width=True):
+                            if st.button(
+                                "🗑", 
+                                key=f"delfile_{f['id']}",
+                                help=f"Delete {filename}",
+                                use_container_width=True
+                            ):
                                 if st.session_state.get(f"confirm_delfile_{f['id']}"):
                                     try:
                                         if delete_project_file(f["id"]):
@@ -1029,7 +1025,7 @@ def dashboard():
             # Add file form if this project is active
             if st.session_state.get("show_add_file_for") == project["id"]:
                 st.markdown("<div style='margin-left: 20px; margin-top: 15px;'>", unsafe_allow_html=True)
-                st.markdown("*Add new file*")
+                st.markdown("Add new file")
                 with st.form(f"add_file_form_{project['id']}"):
                     form_col1, form_col2, form_col3 = st.columns([3, 2, 1])
                     with form_col1:
@@ -1056,7 +1052,7 @@ def dashboard():
                                 create_project_file(
                                     project["id"], filename.strip(), language
                                 )
-                                st.success(f"File *{filename}* created.")
+                                st.success(f"File {filename} created.")
                                 st.session_state["show_add_file_for"] = None
                                 st.rerun()
                             except Exception as e:
@@ -1103,60 +1099,109 @@ def dashboard():
     """
     st.markdown(tips_html, unsafe_allow_html=True)
 
-    # Fixed Floating Chat Button (always visible)
-    import streamlit.components.v1 as components
+    # ========= FIXED FLOATING CHAT BUTTON (GLOBAL, WORKS ON DEPLOY) =========
+    # We inject the button & popup into the PARENT page so position:fixed is
+    # relative to the viewport, not to the component iframe.
 
-    chat_html = f"""
-<style>
-#cv_chat_btn {{
-    position: fixed; bottom: 22px; right: 22px;
-    width: 64px; height: 64px; border-radius: 50%;
-    background: #007bff; color: white; font-size: 30px;
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0px 6px 18px rgba(0,0,0,.45);
-    cursor: pointer; z-index: 99999999998;
-}}
-#cv_chat_btn:hover {{ transform: scale(1.12); }}
-
-#cv_chat_box {{
-    position: fixed; bottom: 10px; right: 22px;
-    width: 380px; height: 460px; border-radius: 14px;
-    background: #020617; border: 1px solid #334155;
-    box-shadow: 0px 16px 40px rgba(0,0,0,.65);
-    z-index: 99999999999; display: none;
-}}
-#cv_chat_box.open {{ display: block; }}
-
-#cv_chat_header {{
-    height: 50px; background: #007bff; color: white;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 16px; font-size: 19px; font-weight: 600;
-}}
-#cv_chat_close {{ font-size: 22px; cursor: pointer; }}
-</style>
-
-<button id="cv_chat_btn">💬</button>
-
-<div id="cv_chat_box">
-    <div id="cv_chat_header">
-        CodeVerse AI <span id="cv_chat_close">✖</span>
-    </div>
-    <iframe src="?chat=1&page=dashboard" width="100%" height="405px" style="border:none;background:#020617;"></iframe>
-</div>
-
+    chat_html = """
 <script>
-document.addEventListener("DOMContentLoaded", function() {{
-    const btn = document.getElementById("cv_chat_btn");
-    const box = document.getElementById("cv_chat_box");
-    const closeBtn = document.getElementById("cv_chat_close");
-    btn.onclick = () => box.classList.add("open");
-    closeBtn.onclick = () => box.classList.remove("open");
-}});
+(function() {
+  const parentDoc = window.parent.document;
+
+  // Avoid duplicates on reruns
+  if (parentDoc.getElementById("cv_chat_btn")) {
+    return;
+  }
+
+  const style = parentDoc.createElement("style");
+  style.innerHTML = `
+    #cv_chat_btn {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #007bff;
+      color: white;
+      font-size: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0px 6px 18px rgba(0,0,0,.45);
+      cursor: pointer;
+      z-index: 99999999998;
+      border: none;
+    }
+    #cv_chat_btn:hover {
+      transform: scale(1.12);
+    }
+    #cv_chat_box {
+      position: fixed;
+      bottom: 10px;
+      right: 22px;
+      width: 380px;
+      height: 460px;
+      border-radius: 14px;
+      background: #020617;
+      border: 1px solid #334155;
+      box-shadow: 0px 16px 40px rgba(0,0,0,.65);
+      z-index: 99999999999;
+      display: none;
+      overflow: hidden;
+    }
+    #cv_chat_box.open {
+      display: block;
+    }
+    #cv_chat_header {
+      height: 50px;
+      background: #007bff;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      font-size: 19px;
+      font-weight: 600;
+    }
+    #cv_chat_close {
+      font-size: 22px;
+      cursor: pointer;
+    }
+  `;
+  parentDoc.head.appendChild(style);
+
+  const wrapper = parentDoc.createElement("div");
+  wrapper.innerHTML = `
+    <button id="cv_chat_btn">💬</button>
+    <div id="cv_chat_box">
+      <div id="cv_chat_header">
+        CodeVerse AI <span id="cv_chat_close">✖</span>
+      </div>
+      <iframe src="?chat=1&page=dashboard" width="100%" height="405px"
+              style="border:none;background:#020617;"></iframe>
+    </div>
+  `;
+  parentDoc.body.appendChild(wrapper);
+
+  const btn = parentDoc.getElementById("cv_chat_btn");
+  const box = parentDoc.getElementById("cv_chat_box");
+  const closeBtn = parentDoc.getElementById("cv_chat_close");
+
+  btn.onclick = function() {
+    box.classList.add("open");
+  };
+  closeBtn.onclick = function() {
+    box.classList.remove("open");
+  };
+})();
 </script>
 """
 
-    components.html(chat_html, height=500, width=0)
+    # Height/width 0 so the component itself doesn't take space,
+    # it only injects the floating button into the parent page.
+    components.html(chat_html, height=0, width=0)
 
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     dashboard()
