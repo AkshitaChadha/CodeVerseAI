@@ -490,12 +490,27 @@ def login():
         elif not user:
             st.error("No account found with this email.")
         elif check_password(password, user["password"]):
+            # Store secure session state
+            st.session_state["authenticated"] = True
             st.session_state["user"] = {
                 "id": user["id"],
                 "username": user["username"],
             }
-            st.session_state["authenticated"] = True
+            st.session_state["user_email"] = email
+
+            # Generate a simple JWT-like token
+            session_token = f"TOKEN-{user['id']}-{int(time.time())}"
+            st.session_state["access_token"] = session_token
+
+            # record login for streaks
+            try:
+                record_login(user["id"])
+            except Exception as e:
+                print("record_login error:", e)
+
+            # Redirect to dashboard
             st.session_state["auth_mode"] = "dashboard"
+            st.rerun()
 
             # 🔹 record login for streaks
             try:
