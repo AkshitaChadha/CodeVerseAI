@@ -47,15 +47,160 @@ try:
 except Exception as e:
     st.error(f"Database initialization error: {e}")
 
-# Local editor frontend (port 5000 for local)
-def open_editor(room_id, username):
-    editor_url = f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}"
-    st.markdown(f"""
-        <script>
-            window.open("{editor_url}", "_blank");
-        </script>
-    """, unsafe_allow_html=True)
+# ✅ MOVED TO TOP LEVEL: Define EDITOR_FRONTEND_URL at the top level
+EDITOR_FRONTEND_URL = os.getenv("EDITOR_FRONTEND_URL", "https://codeverseai-editor.vercel.app")
 
+def open_editor_with_close_support(room_id, filename, username, token):
+    """Open editor in new tab with support for auto-closing"""
+    encoded_filename = urllib.parse.quote(filename)
+    editor_url = f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}&filename={encoded_filename}&token={token}"
+    
+    js_code = f"""
+    <script>
+        // Store the reference to the editor window
+        if (!window.editorWindows) window.editorWindows = {{}};
+        
+        const editorId = '{room_id}_{filename}';
+        window.editorWindows[editorId] = window.open('{editor_url}', '_blank');
+        
+        console.log('Opened editor:', editorId);
+        
+        // Listen for editor closure messages
+        window.addEventListener('message', function(event) {{
+            if (event.data.type === 'EDITOR_CLOSING') {{
+                console.log('Editor closing message received:', event.data);
+                // Remove from tracking
+                if (window.editorWindows[editorId]) {{
+                    delete window.editorWindows[editorId];
+                }}
+                // Optional: Refresh dashboard
+                setTimeout(() => {{
+                    window.location.reload();
+                }}, 500);
+            }}
+        }});
+        
+        // Check periodically if editor closed (fallback)
+        function checkEditorClosed() {{
+            if (window.editorWindows[editorId] && window.editorWindows[editorId].closed) {{
+                console.log('Editor window was closed');
+                delete window.editorWindows[editorId];
+                window.dispatchEvent(new Event('editorClosed'));
+            }}
+        }}
+        setInterval(checkEditorClosed, 2000);
+    </script>
+    """
+    return js_code
+
+def enhanced_quick_room_link(action_slug: str, username: str, token: str):
+    """Enhanced quick actions with close support"""
+    room_id = uuid.uuid4().hex
+    editor_url = f"{EDITOR_FRONTEND_URL}/editor/{room_id}?username={username}&from={action_slug}&token={token}"
+    
+    js_code = f"""
+    <script>
+        function openEditor_{action_slug}() {{
+            if (!window.quickEditors) window.quickEditors = {{}};
+            const editorId = 'quick_{action_slug}';
+            window.quickEditors[editorId] = window.open('{editor_url}', '_blank');
+            
+            // Listen for closure
+            window.addEventListener('message', function(event) {{
+                if (event.data.type === 'EDITOR_CLOSING' && event.data.from === '{action_slug}') {{
+                    console.log('Quick editor closing:', '{action_slug}');
+                    if (window.quickEditors[editorId]) {{
+                        delete window.quickEditors[editorId];
+                    }}
+                }}
+            }});
+        }}
+    </script>
+    <a href="javascript:openEditor_{action_slug}()" class="ai-action-card">
+        <div class="ai-action-icon">{"🧠" if action_slug == "explain" else "🐞" if action_slug == "debug" else "📝" if action_slug == "docs" else "⚡"}</div>
+        <div class="ai-action-title">{"Explain Code" if action_slug == "explain" else "Debug Code" if action_slug == "debug" else "Generate Docs" if action_slug == "docs" else "AI Code Assistant"}</div>
+    </a>
+    """
+    return js_code
+
+def setup_editor_tab_management():
+    """Setup all the JavaScript for editor tab management"""
+    tab_management_js = """
+    <script>
+    // Global editor window tracking
+    if (!window.editorWindows) window.editorWindows = {};
+    if (!window.quickEditors) window.quickEditors = {};
+    if (!window.recentEditors) window.recentEditors = {};
+    
+    // Global message listener for editor closures
+    window.addEventListener('message', function(event) {
+        const data = event.data;
+        
+        if (data.type === 'EDITOR_CLOSING') {
+            console.log('Editor closure detected:', data);
+            
+            // Clean up all tracking
+            Object.keys(window.editorWindows).forEach(key => {
+                if (window.editorWindows[key] && window.editorWindows[key].closed) {
+                    delete window.editorWindows[key];
+                }
+            });
+            
+            Object.keys(window.quickEditors).forEach(key => {
+                if (window.quickEditors[key] && window.quickEditors[key].closed) {
+                    delete window.quickEditors[key];
+                }
+            });
+            
+            Object.keys(window.recentEditors).forEach(key => {
+                if (window.recentEditors[key] && window.recentEditors[key].closed) {
+                    delete window.recentEditors[key];
+                }
+            });
+            
+            // Show notification and refresh
+            showClosureNotification();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+    });
+    
+    function showClosureNotification() {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        notification.textContent = '✓ Editor closed successfully';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
+        }, 3000);
+    }
+    
+    // Periodic cleanup
+    setInterval(() => {
+        Object.keys(window.editorWindows).forEach(key => {
+            if (window.editorWindows[key] && window.editorWindows[key].closed) {
+                delete window.editorWindows[key];
+            }
+        });
+    }, 5000);
+    </script>
+    """
+    return tab_management_js
 
 # Updated Coding Tips with better, shorter shortcuts & tricks
 CODING_TIPS = [
