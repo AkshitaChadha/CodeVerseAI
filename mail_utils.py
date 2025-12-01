@@ -33,7 +33,7 @@ def welcome_mail(user_email, username):
           </p>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="https://codeverseai.example.com/login"
+            <a href="https://codeverseai.streamlit.app/~/+/?login"
                style="background: #4a90e2; color: white; padding: 12px 30px; 
                       border-radius: 8px; text-decoration: none; font-weight: 600;">
               Launch Dashboard
