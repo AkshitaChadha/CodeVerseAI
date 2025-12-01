@@ -309,44 +309,69 @@ def dashboard():
         user_input = st.chat_input("Type your message...")
 
         if user_input:
-            st.chat_message("user").write(user_input)
+            # Add user message to chat history
             st.session_state.chatbot_messages.append(
                 {"role": "user", "content": user_input}
             )
-
+            
+            # Display user message immediately
+            st.chat_message("user").write(user_input)
+            
             if client:
-                typing_msg = st.chat_message("assistant")
-                typing_placeholder = typing_msg.empty()
-                typing_placeholder.write(" typing...")
-
-                try:
-                    response = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {
-                                "role": "system",
-                                "content": "You are a helpful and friendly AI assistant.",
-                            }
-                        ]
-                        + st.session_state.chatbot_messages,
-                    )
-                    reply = response.choices[0].message.content
-                    typing_placeholder.empty()
-                    st.chat_message("assistant").write(reply)
-                    st.session_state.chatbot_messages.append(
-                        {"role": "assistant", "content": reply}
-                    )
-                except Exception as e:
-                    typing_placeholder.empty()
-                    error_msg = f"Sorry, I encountered an error: {str(e)}"
-                    st.chat_message("assistant").write(error_msg)
-                    st.session_state.chatbot_messages.append(
-                        {"role": "assistant", "content": error_msg}
-                    )
+                # Create a placeholder for the assistant's response
+                with st.chat_message("assistant"):
+                    response_placeholder = st.empty()
+                    
+                    # Show typing indicator
+                    response_placeholder.markdown("▌")
+                    
+                    try:
+                        # Get AI response
+                        response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=[
+                                {
+                                    "role": "system",
+                                    "content": "You are a helpful and friendly AI assistant.",
+                                }
+                            ] + st.session_state.chatbot_messages,
+                        )
+                        
+                        reply = response.choices[0].message.content
+                        
+                        # Clear typing indicator and show actual response
+                        response_placeholder.empty()
+                        response_placeholder.write(reply)
+                        
+                        # Add assistant response to chat history
+                        st.session_state.chatbot_messages.append(
+                            {"role": "assistant", "content": reply}
+                        )
+                        
+                    except Exception as e:
+                        # Clear typing indicator and show error
+                        response_placeholder.empty()
+                        error_msg = f"Sorry, I encountered an error: {str(e)}"
+                        response_placeholder.write(error_msg)
+                        
+                        # Add error to chat history
+                        st.session_state.chatbot_messages.append(
+                            {"role": "assistant", "content": error_msg}
+                        )
             else:
-                st.chat_message("assistant").write(
-                    "Chat functionality is currently unavailable. Please check your API configuration."
-                )
+                # Handle no client case
+                with st.chat_message("assistant"):
+                    error_placeholder = st.empty()
+                    error_placeholder.write(
+                        "Chat functionality is currently unavailable. Please check your API configuration."
+                    )
+                    
+                    st.session_state.chatbot_messages.append(
+                        {
+                            "role": "assistant", 
+                            "content": "Chat functionality is currently unavailable. Please check your API configuration."
+                        }
+                    )
 
         if st.button(" Clear Conversation"):
             st.session_state.chatbot_messages = [
