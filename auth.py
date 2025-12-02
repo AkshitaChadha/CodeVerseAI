@@ -5,6 +5,7 @@ import random
 from db import (
     insert_user,
     find_user_by_email,
+    find_user_by_username,
     update_password,
     check_password,
     save_password_reset_otp,
@@ -383,7 +384,6 @@ def signup():
         email = st.text_input("📧 Email")
         password = st.text_input("🔒 Password", type="password")
         confirm = st.text_input("✅ Confirm Password", type="password")
-        agree = st.checkbox("I agree to the Terms & Privacy Policy")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -470,9 +470,9 @@ def signup():
             st.error("⚠ Passwords do not match")
             return
 
-        # Terms & Privacy Agreement
-        if not agree:
-            st.error("⚠ You must agree to the Terms & Privacy Policy")
+        # Username already exists
+        if find_user_by_username(username):
+            st.error("⚠ Username already taken. Please choose another one.")
             return
 
         # Email already exists

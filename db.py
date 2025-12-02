@@ -187,6 +187,15 @@ def find_user_by_email(email):
     conn.close()
     return row
 
+def find_user_by_username(username):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE LOWER(username) = LOWER(%s)", (username,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
 
 def update_password(email, new_plain_password):
     conn = get_connection()
