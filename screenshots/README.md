@@ -1,1 +1,0 @@
-Screenshots of CodeVerse AI
